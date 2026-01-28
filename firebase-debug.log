@@ -1,0 +1,162 @@
+[debug] [2026-01-28T20:24:05.750Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-01-28T20:24:05.751Z] > authorizing via signed-in user (rschmit@gmail.com)
+[debug] [2026-01-28T20:24:05.751Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-01-28T20:24:05.751Z] > authorizing via signed-in user (rschmit@gmail.com)
+[debug] [2026-01-28T20:24:05.751Z] Checked if tokens are valid: false, expires at: 1768684603300
+[debug] [2026-01-28T20:24:05.751Z] Checked if tokens are valid: false, expires at: 1768684603300
+[debug] [2026-01-28T20:24:05.751Z] > refreshing access token with scopes: []
+[debug] [2026-01-28T20:24:05.752Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-01-28T20:24:05.752Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-01-28T20:24:05.753Z] Checked if tokens are valid: false, expires at: 1768684603300
+[debug] [2026-01-28T20:24:05.753Z] Checked if tokens are valid: false, expires at: 1768684603300
+[debug] [2026-01-28T20:24:05.753Z] > refreshing access token with scopes: []
+[debug] [2026-01-28T20:24:05.753Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-01-28T20:24:05.753Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-01-28T20:24:05.753Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-01-28T20:24:05.753Z] > authorizing via signed-in user (rschmit@gmail.com)
+[debug] [2026-01-28T20:24:05.753Z] Checked if tokens are valid: false, expires at: 1768684603300
+[debug] [2026-01-28T20:24:05.753Z] Checked if tokens are valid: false, expires at: 1768684603300
+[debug] [2026-01-28T20:24:05.753Z] > refreshing access token with scopes: []
+[debug] [2026-01-28T20:24:05.753Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-01-28T20:24:05.753Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-01-28T20:24:05.873Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-01-28T20:24:05.873Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-01-28T20:24:05.918Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/gametape-ai-dev/billingInfo [none]
+[debug] [2026-01-28T20:24:05.921Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-01-28T20:24:05.921Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-01-28T20:24:05.954Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/gametape-ai-dev/billingInfo [none]
+[debug] [2026-01-28T20:24:05.957Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-01-28T20:24:05.957Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-01-28T20:24:05.967Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/gametape-ai-dev/billingInfo [none]
+[debug] [2026-01-28T20:24:06.155Z] <<< [apiv2][status] GET https://cloudbilling.googleapis.com/v1/projects/gametape-ai-dev/billingInfo 200
+[debug] [2026-01-28T20:24:06.156Z] <<< [apiv2][body] GET https://cloudbilling.googleapis.com/v1/projects/gametape-ai-dev/billingInfo {"name":"projects/gametape-ai-dev/billingInfo","projectId":"gametape-ai-dev","billingAccountName":"billingAccounts/015C5B-130062-D1C9EC","billingEnabled":true}
+[debug] [2026-01-28T20:24:06.161Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.161Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.161Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.161Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.161Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.161Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.161Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.161Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.161Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.161Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.171Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.171Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.171Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/storage.googleapis.com [none]
+[debug] [2026-01-28T20:24:06.171Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/storage.googleapis.com x-goog-quota-user=projects/gametape-ai-dev
+[debug] [2026-01-28T20:24:06.173Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebasedataconnect.googleapis.com [none]
+[debug] [2026-01-28T20:24:06.173Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebasedataconnect.googleapis.com x-goog-quota-user=projects/gametape-ai-dev
+[debug] [2026-01-28T20:24:06.173Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/identitytoolkit.googleapis.com [none]
+[debug] [2026-01-28T20:24:06.173Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/identitytoolkit.googleapis.com x-goog-quota-user=projects/gametape-ai-dev
+[debug] [2026-01-28T20:24:06.174Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/fcm.googleapis.com [none]
+[debug] [2026-01-28T20:24:06.174Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/fcm.googleapis.com x-goog-quota-user=projects/gametape-ai-dev
+[debug] [2026-01-28T20:24:06.174Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebaseremoteconfig.googleapis.com [none]
+[debug] [2026-01-28T20:24:06.174Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebaseremoteconfig.googleapis.com x-goog-quota-user=projects/gametape-ai-dev
+[debug] [2026-01-28T20:24:06.175Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebaseio.com [none]
+[debug] [2026-01-28T20:24:06.175Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebaseio.com x-goog-quota-user=projects/gametape-ai-dev
+[debug] [2026-01-28T20:24:06.208Z] <<< [apiv2][status] GET https://cloudbilling.googleapis.com/v1/projects/gametape-ai-dev/billingInfo 200
+[debug] [2026-01-28T20:24:06.208Z] <<< [apiv2][body] GET https://cloudbilling.googleapis.com/v1/projects/gametape-ai-dev/billingInfo {"name":"projects/gametape-ai-dev/billingInfo","projectId":"gametape-ai-dev","billingAccountName":"billingAccounts/015C5B-130062-D1C9EC","billingEnabled":true}
+[debug] [2026-01-28T20:24:06.209Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.209Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.209Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.209Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.209Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.209Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.209Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.209Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.209Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.209Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.211Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.211Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.211Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/storage.googleapis.com [none]
+[debug] [2026-01-28T20:24:06.211Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/storage.googleapis.com x-goog-quota-user=projects/gametape-ai-dev
+[debug] [2026-01-28T20:24:06.212Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebasedataconnect.googleapis.com [none]
+[debug] [2026-01-28T20:24:06.212Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebasedataconnect.googleapis.com x-goog-quota-user=projects/gametape-ai-dev
+[debug] [2026-01-28T20:24:06.212Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/identitytoolkit.googleapis.com [none]
+[debug] [2026-01-28T20:24:06.212Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/identitytoolkit.googleapis.com x-goog-quota-user=projects/gametape-ai-dev
+[debug] [2026-01-28T20:24:06.213Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/fcm.googleapis.com [none]
+[debug] [2026-01-28T20:24:06.213Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/fcm.googleapis.com x-goog-quota-user=projects/gametape-ai-dev
+[debug] [2026-01-28T20:24:06.213Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebaseremoteconfig.googleapis.com [none]
+[debug] [2026-01-28T20:24:06.213Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebaseremoteconfig.googleapis.com x-goog-quota-user=projects/gametape-ai-dev
+[debug] [2026-01-28T20:24:06.213Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebaseio.com [none]
+[debug] [2026-01-28T20:24:06.213Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebaseio.com x-goog-quota-user=projects/gametape-ai-dev
+[debug] [2026-01-28T20:24:06.245Z] <<< [apiv2][status] GET https://cloudbilling.googleapis.com/v1/projects/gametape-ai-dev/billingInfo 200
+[debug] [2026-01-28T20:24:06.245Z] <<< [apiv2][body] GET https://cloudbilling.googleapis.com/v1/projects/gametape-ai-dev/billingInfo {"name":"projects/gametape-ai-dev/billingInfo","projectId":"gametape-ai-dev","billingAccountName":"billingAccounts/015C5B-130062-D1C9EC","billingEnabled":true}
+[debug] [2026-01-28T20:24:06.246Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.246Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.246Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.246Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.246Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.246Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.246Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.246Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.246Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.246Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.247Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.247Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.247Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/storage.googleapis.com [none]
+[debug] [2026-01-28T20:24:06.247Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/storage.googleapis.com x-goog-quota-user=projects/gametape-ai-dev
+[debug] [2026-01-28T20:24:06.248Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebasedataconnect.googleapis.com [none]
+[debug] [2026-01-28T20:24:06.248Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebasedataconnect.googleapis.com x-goog-quota-user=projects/gametape-ai-dev
+[debug] [2026-01-28T20:24:06.248Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/identitytoolkit.googleapis.com [none]
+[debug] [2026-01-28T20:24:06.248Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/identitytoolkit.googleapis.com x-goog-quota-user=projects/gametape-ai-dev
+[debug] [2026-01-28T20:24:06.248Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/fcm.googleapis.com [none]
+[debug] [2026-01-28T20:24:06.248Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/fcm.googleapis.com x-goog-quota-user=projects/gametape-ai-dev
+[debug] [2026-01-28T20:24:06.249Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebaseremoteconfig.googleapis.com [none]
+[debug] [2026-01-28T20:24:06.249Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebaseremoteconfig.googleapis.com x-goog-quota-user=projects/gametape-ai-dev
+[debug] [2026-01-28T20:24:06.249Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebaseio.com [none]
+[debug] [2026-01-28T20:24:06.249Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebaseio.com x-goog-quota-user=projects/gametape-ai-dev
+[debug] [2026-01-28T20:24:06.474Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebaseremoteconfig.googleapis.com 200
+[debug] [2026-01-28T20:24:06.474Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebaseremoteconfig.googleapis.com [omitted]
+[debug] [2026-01-28T20:24:06.483Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebaseio.com 403
+[debug] [2026-01-28T20:24:06.483Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebaseio.com [omitted]
+[debug] [2026-01-28T20:24:06.484Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebasedataconnect.googleapis.com 200
+[debug] [2026-01-28T20:24:06.484Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebasedataconnect.googleapis.com [omitted]
+[debug] [2026-01-28T20:24:06.484Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/identitytoolkit.googleapis.com 200
+[debug] [2026-01-28T20:24:06.484Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/identitytoolkit.googleapis.com [omitted]
+[debug] [2026-01-28T20:24:06.491Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/fcm.googleapis.com 200
+[debug] [2026-01-28T20:24:06.491Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/fcm.googleapis.com [omitted]
+[debug] [2026-01-28T20:24:06.497Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/storage.googleapis.com 200
+[debug] [2026-01-28T20:24:06.497Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/storage.googleapis.com [omitted]
+[debug] [2026-01-28T20:24:06.607Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebaseio.com 403
+[debug] [2026-01-28T20:24:06.607Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebaseio.com [omitted]
+[debug] [2026-01-28T20:24:06.613Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebaseio.com 403
+[debug] [2026-01-28T20:24:06.613Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebaseio.com [omitted]
+[debug] [2026-01-28T20:24:06.643Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebasedataconnect.googleapis.com 200
+[debug] [2026-01-28T20:24:06.643Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebasedataconnect.googleapis.com [omitted]
+[debug] [2026-01-28T20:24:06.643Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebaseremoteconfig.googleapis.com 200
+[debug] [2026-01-28T20:24:06.643Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebaseremoteconfig.googleapis.com [omitted]
+[debug] [2026-01-28T20:24:06.649Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/fcm.googleapis.com 200
+[debug] [2026-01-28T20:24:06.649Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/fcm.googleapis.com [omitted]
+[debug] [2026-01-28T20:24:06.654Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/identitytoolkit.googleapis.com 200
+[debug] [2026-01-28T20:24:06.654Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/identitytoolkit.googleapis.com [omitted]
+[debug] [2026-01-28T20:24:06.660Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebaseremoteconfig.googleapis.com 200
+[debug] [2026-01-28T20:24:06.660Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebaseremoteconfig.googleapis.com [omitted]
+[debug] [2026-01-28T20:24:06.667Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebasedataconnect.googleapis.com 200
+[debug] [2026-01-28T20:24:06.667Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/firebasedataconnect.googleapis.com [omitted]
+[debug] [2026-01-28T20:24:06.668Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/identitytoolkit.googleapis.com 200
+[debug] [2026-01-28T20:24:06.668Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/identitytoolkit.googleapis.com [omitted]
+[debug] [2026-01-28T20:24:06.674Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/storage.googleapis.com 200
+[debug] [2026-01-28T20:24:06.674Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/storage.googleapis.com [omitted]
+[debug] [2026-01-28T20:24:06.682Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/fcm.googleapis.com 200
+[debug] [2026-01-28T20:24:06.682Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/fcm.googleapis.com [omitted]
+[debug] [2026-01-28T20:24:06.689Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/storage.googleapis.com 200
+[debug] [2026-01-28T20:24:06.689Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/gametape-ai-dev/services/storage.googleapis.com [omitted]
+[debug] [2026-01-28T20:24:06.705Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-01-28T20:24:06.706Z] > authorizing via signed-in user (rschmit@gmail.com)
+[debug] [2026-01-28T20:24:06.706Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.706Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.706Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/gametape-ai-dev/billingInfo [none]
+[debug] [2026-01-28T20:24:06.722Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-01-28T20:24:06.722Z] > authorizing via signed-in user (rschmit@gmail.com)
+[debug] [2026-01-28T20:24:06.723Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.723Z] Checked if tokens are valid: true, expires at: 1769635444957
+[debug] [2026-01-28T20:24:06.723Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/gametape-ai-dev/billingInfo [none]
+[debug] [2026-01-28T20:24:06.796Z] <<< [apiv2][status] GET https://cloudbilling.googleapis.com/v1/projects/gametape-ai-dev/billingInfo 200
+[debug] [2026-01-28T20:24:06.796Z] <<< [apiv2][body] GET https://cloudbilling.googleapis.com/v1/projects/gametape-ai-dev/billingInfo {"name":"projects/gametape-ai-dev/billingInfo","projectId":"gametape-ai-dev","billingAccountName":"billingAccounts/015C5B-130062-D1C9EC","billingEnabled":true}
+[debug] [2026-01-28T20:24:06.800Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-01-28T20:24:06.800Z] > authorizing via signed-in user (rschmit@gmail.com)
+[debug] [2026-01-28T20:24:06.804Z] <<< [apiv2][status] GET https://cloudbilling.googleapis.com/v1/projects/gametape-ai-dev/billingInfo 200
+[debug] [2026-01-28T20:24:06.804Z] <<< [apiv2][body] GET https://cloudbilling.googleapis.com/v1/projects/gametape-ai-dev/billingInfo {"name":"projects/gametape-ai-dev/billingInfo","projectId":"gametape-ai-dev","billingAccountName":"billingAccounts/015C5B-130062-D1C9EC","billingEnabled":true}
+[debug] [2026-01-28T20:24:06.805Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-01-28T20:24:06.806Z] > authorizing via signed-in user (rschmit@gmail.com)
