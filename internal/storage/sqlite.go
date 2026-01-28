@@ -7,12 +7,16 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
+	sqlite_vec "github.com/asg017/sqlite-vec-go-bindings/cgo"
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/justrnr500/pearls/internal/pearl"
 )
+
+var vecInitOnce sync.Once
 
 const schema = `
 CREATE TABLE IF NOT EXISTS pearls (
@@ -38,6 +42,13 @@ CREATE INDEX IF NOT EXISTS idx_pearls_type ON pearls(type);
 CREATE INDEX IF NOT EXISTS idx_pearls_status ON pearls(status);
 `
 
+// vectorSchema creates the vector embeddings table (separate due to virtual table syntax)
+const vectorSchema = `
+CREATE VIRTUAL TABLE IF NOT EXISTS pearl_embeddings USING vec0(
+	embedding FLOAT[384]
+);
+`
+
 // DB wraps the SQLite database connection.
 type DB struct {
 	db   *sql.DB
@@ -46,6 +57,11 @@ type DB struct {
 
 // OpenDB opens or creates a SQLite database at the given path.
 func OpenDB(path string) (*DB, error) {
+	// Initialize sqlite-vec extension (once per process)
+	vecInitOnce.Do(func() {
+		sqlite_vec.Auto()
+	})
+
 	// Ensure directory exists
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {
@@ -61,6 +77,12 @@ func OpenDB(path string) (*DB, error) {
 	if _, err := db.Exec(schema); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("initialize schema: %w", err)
+	}
+
+	// Initialize vector schema
+	if _, err := db.Exec(vectorSchema); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("initialize vector schema: %w", err)
 	}
 
 	return &DB{db: db, path: path}, nil
@@ -284,6 +306,32 @@ func (d *DB) Count() (int, error) {
 	var count int
 	err := d.db.QueryRow("SELECT COUNT(*) FROM pearls").Scan(&count)
 	return count, err
+}
+
+// FindReferencingPearls finds all pearls that reference the given ID.
+func (d *DB) FindReferencingPearls(targetID string) ([]string, error) {
+	// Search for targetID in the refs JSON array
+	// The refs field stores JSON like: ["db.postgres.users", "db.postgres.orders"]
+	pattern := fmt.Sprintf(`%%"%s"%%`, targetID)
+	rows, err := d.db.Query(
+		"SELECT id FROM pearls WHERE refs LIKE ? ORDER BY namespace, name",
+		pattern,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("query referencing pearls: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+
+	return ids, rows.Err()
 }
 
 // scanner interface for both sql.Row and sql.Rows

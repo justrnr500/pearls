@@ -26,10 +26,11 @@ const (
 
 // Config represents the pearls configuration.
 type Config struct {
-	Project ProjectConfig `yaml:"project"`
-	Storage StorageConfig `yaml:"storage"`
-	Defaults DefaultsConfig `yaml:"defaults"`
-	Aliases map[string]string `yaml:"aliases,omitempty"`
+	Project      ProjectConfig      `yaml:"project"`
+	Storage      StorageConfig      `yaml:"storage"`
+	Defaults     DefaultsConfig     `yaml:"defaults"`
+	VectorSearch VectorSearchConfig `yaml:"vector_search"`
+	Aliases      map[string]string  `yaml:"aliases,omitempty"`
 }
 
 // ProjectConfig holds project identification settings.
@@ -47,6 +48,12 @@ type StorageConfig struct {
 type DefaultsConfig struct {
 	Status    string `yaml:"status"`
 	CreatedBy string `yaml:"created_by"`
+}
+
+// VectorSearchConfig holds vector search settings.
+type VectorSearchConfig struct {
+	Enabled   bool   `yaml:"enabled"`
+	ModelPath string `yaml:"model_path"`
 }
 
 // Default returns a default configuration.
@@ -67,6 +74,10 @@ func Default() *Config {
 		Defaults: DefaultsConfig{
 			Status:    "active",
 			CreatedBy: "${USER}",
+		},
+		VectorSearch: VectorSearchConfig{
+			Enabled:   true,
+			ModelPath: "~/.pearls/models",
 		},
 		Aliases: map[string]string{},
 	}
