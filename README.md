@@ -14,11 +14,19 @@ Pearls is a CLI tool for storing and retrieving structured markdown documentatio
 - **Hierarchical** -- Dot-separated namespaces: `db.postgres.users`, `api.stripe.customers`
 - **Semantic search** -- Natural language queries powered by local embeddings (all-MiniLM-L6-v2)
 - **Relationship tracking** -- Pearls reference other pearls, creating a navigable graph
+- **Database introspection** -- Auto-generate pearls from live Postgres, MySQL, or SQLite databases
+- **Health checks** -- `pearls doctor` validates catalog integrity (sync, references, orphans)
 
 ## Install
 
 ```bash
 go install github.com/justrnr500/pearls/cmd/pearls@latest
+```
+
+A shorter alias is also available:
+
+```bash
+go install github.com/justrnr500/pearls/cmd/pl@latest
 ```
 
 ## Quick Start
@@ -37,6 +45,9 @@ $EDITOR .pearls/content/db/postgres/users.md
 pearls create db.postgres.orders --type table -d "Customer orders"
 pearls update db.postgres.orders --add-ref db.postgres.users
 
+# Or auto-generate from a live database
+pearls introspect postgres --prefix db.postgres
+
 # Search
 pearls search "customer data"
 pearls search "where is payment info stored" --semantic
@@ -46,6 +57,9 @@ pearls refs db.postgres.users
 
 # Generate context for an agent prompt
 pearls context db.postgres.users db.postgres.orders
+
+# Check catalog health
+pearls doctor
 
 # Commit to git
 git add .pearls/
@@ -225,6 +239,58 @@ pearls index --rebuild
 
 Use `--rebuild` after initial setup, model upgrades, or to index existing pearls that don't have embeddings yet.
 
+### `pearls introspect`
+
+Auto-generate pearls from a live database.
+
+```bash
+pearls introspect postgres --prefix db.postgres
+pearls introspect mysql --prefix db.mysql --schema mydb
+pearls introspect sqlite --prefix db.local
+pearls introspect postgres --env DATABASE_URL --prefix db.main
+pearls introspect postgres --prefix db.pg --dry-run
+```
+
+**Flags:**
+- `--prefix` -- Namespace prefix for generated pearls (required)
+- `--schema` -- Limit to a specific schema
+- `--env` -- Override env var name for connection string
+- `--dry-run` -- Print what would be created without writing
+- `--skip-existing` -- Don't overwrite pearls that already exist
+
+Supported databases: **PostgreSQL**, **MySQL**, **SQLite**.
+
+Credentials are read from `.env` in the repo root. Default env vars: `PEARLS_POSTGRES_URL`, `PEARLS_MYSQL_URL`, `PEARLS_SQLITE_PATH`.
+
+Introspection discovers schemas, tables, columns, foreign keys, and indexes. Foreign keys are automatically converted to pearl references.
+
+### `pearls doctor`
+
+Run health checks on the catalog.
+
+```bash
+pearls doctor
+pearls doctor --json
+```
+
+Checks:
+- JSONL/SQLite sync (pearl counts and IDs match)
+- Orphaned content (markdown files with no pearl)
+- Missing content (pearls with content_path that doesn't exist)
+- Broken references (pearls referencing IDs that don't exist)
+- Config validity (config.yaml parses without errors)
+
+### `pearls onboard`
+
+Inject agent instructions into project config files.
+
+```bash
+pearls onboard                    # Update CLAUDE.md (default)
+pearls onboard --target agents    # Update agents.md
+pearls onboard --target all       # Update both
+pearls onboard --force            # Overwrite existing pearls section
+```
+
 ## Directory Structure
 
 ```
@@ -368,11 +434,14 @@ go install ./cmd/pearls
 ### Project Structure
 
 ```
-cmd/pearls/           # Entry point
+cmd/
+├── pearls/           # Main entry point
+└── pl/               # Short alias
 internal/
 ├── cmd/              # CLI commands (Cobra)
 ├── config/           # Configuration management
 ├── embedding/        # Vector embeddings (hugot + all-MiniLM-L6-v2)
+├── introspect/       # Database introspection (Postgres, MySQL, SQLite)
 ├── pearl/            # Core types and validation
 └── storage/          # SQLite, JSONL, content files, vector index
 ```
