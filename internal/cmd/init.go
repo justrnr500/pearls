@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -119,10 +120,40 @@ pearls.db-wal
 		fmt.Println("✓ Created .gitignore")
 	}
 
+	// Ensure .env is in repo root .gitignore
+	rootGitignore := filepath.Join(cwd, ".gitignore")
+	ensureGitignoreEntry(rootGitignore, ".env")
+
 	if !initQuiet {
 		fmt.Println("\nReady to track data assets. Try:")
 		fmt.Println("  pearls create db.postgres.users --type table")
 	}
 
 	return nil
+}
+
+// ensureGitignoreEntry ensures that the given entry exists in the gitignore file
+// at path. If the file does not exist, it is created. If the entry already
+// exists (compared after trimming whitespace), no changes are made.
+func ensureGitignoreEntry(path, entry string) {
+	data, err := os.ReadFile(path)
+	if err != nil && !os.IsNotExist(err) {
+		return
+	}
+
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		if strings.TrimSpace(line) == entry {
+			return
+		}
+	}
+
+	// Append entry on a new line
+	content := string(data)
+	if len(content) > 0 && !strings.HasSuffix(content, "\n") {
+		content += "\n"
+	}
+	content += entry + "\n"
+
+	os.WriteFile(path, []byte(content), 0644)
 }
