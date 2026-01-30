@@ -556,6 +556,181 @@ func TestFindReferencingPearls(t *testing.T) {
 	}
 }
 
+func TestGlobsAndScopes(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "pearls-globs-scopes-test-*")
+	if err != nil {
+		t.Fatalf("create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	dbPath := filepath.Join(tmpDir, "pearls.db")
+	db, err := OpenDB(dbPath)
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+	defer db.Close()
+
+	now := time.Now().Truncate(time.Second)
+
+	// Insert pearls with globs and scopes
+	pearls := []*pearl.Pearl{
+		{
+			ID: "conv.api-style", Name: "api-style", Namespace: "conv",
+			Type: pearl.TypeCustom, Status: pearl.StatusActive,
+			Globs:  []string{"src/api/**/*.go", "pkg/handlers/**"},
+			Scopes: []string{"backend", "api"},
+			CreatedAt: now, UpdatedAt: now,
+		},
+		{
+			ID: "conv.frontend-style", Name: "frontend-style", Namespace: "conv",
+			Type: pearl.TypeCustom, Status: pearl.StatusActive,
+			Globs:  []string{"src/web/**/*.tsx", "src/web/**/*.ts"},
+			Scopes: []string{"frontend"},
+			CreatedAt: now, UpdatedAt: now,
+		},
+		{
+			ID: "conv.general", Name: "general", Namespace: "conv",
+			Type: pearl.TypeCustom, Status: pearl.StatusActive,
+			Globs:  []string{},
+			Scopes: []string{"backend", "frontend"},
+			CreatedAt: now, UpdatedAt: now,
+		},
+		{
+			ID: "conv.no-globs", Name: "no-globs", Namespace: "conv",
+			Type: pearl.TypeCustom, Status: pearl.StatusActive,
+			Scopes: []string{},
+			CreatedAt: now, UpdatedAt: now,
+		},
+	}
+
+	for _, p := range pearls {
+		if err := db.Insert(p); err != nil {
+			t.Fatalf("insert %s: %v", p.ID, err)
+		}
+	}
+
+	// Test roundtrip: Get should return globs and scopes
+	t.Run("Roundtrip", func(t *testing.T) {
+		got, err := db.Get("conv.api-style")
+		if err != nil {
+			t.Fatalf("get: %v", err)
+		}
+		if got == nil {
+			t.Fatal("pearl not found")
+		}
+		if len(got.Globs) != 2 {
+			t.Errorf("len(Globs) = %d, want 2", len(got.Globs))
+		}
+		if len(got.Scopes) != 2 {
+			t.Errorf("len(Scopes) = %d, want 2", len(got.Scopes))
+		}
+		if got.Globs[0] != "src/api/**/*.go" {
+			t.Errorf("Globs[0] = %q, want %q", got.Globs[0], "src/api/**/*.go")
+		}
+		if got.Scopes[0] != "backend" {
+			t.Errorf("Scopes[0] = %q, want %q", got.Scopes[0], "backend")
+		}
+	})
+
+	// Test FindByScope
+	t.Run("FindByScope", func(t *testing.T) {
+		// "backend" scope: api-style + general
+		results, err := db.FindByScope("backend")
+		if err != nil {
+			t.Fatalf("find by scope: %v", err)
+		}
+		if len(results) != 2 {
+			t.Errorf("expected 2 pearls with backend scope, got %d", len(results))
+		}
+
+		// "frontend" scope: frontend-style + general
+		results, err = db.FindByScope("frontend")
+		if err != nil {
+			t.Fatalf("find by scope: %v", err)
+		}
+		if len(results) != 2 {
+			t.Errorf("expected 2 pearls with frontend scope, got %d", len(results))
+		}
+
+		// "api" scope: api-style only
+		results, err = db.FindByScope("api")
+		if err != nil {
+			t.Fatalf("find by scope: %v", err)
+		}
+		if len(results) != 1 {
+			t.Errorf("expected 1 pearl with api scope, got %d", len(results))
+		}
+		if len(results) > 0 && results[0].ID != "conv.api-style" {
+			t.Errorf("expected conv.api-style, got %s", results[0].ID)
+		}
+
+		// nonexistent scope
+		results, err = db.FindByScope("nonexistent")
+		if err != nil {
+			t.Fatalf("find by scope: %v", err)
+		}
+		if len(results) != 0 {
+			t.Errorf("expected 0 pearls with nonexistent scope, got %d", len(results))
+		}
+	})
+
+	// Test FindByGlob
+	t.Run("FindByGlob", func(t *testing.T) {
+		// Path matching api-style globs
+		results, err := db.FindByGlob("src/api/v1/handler.go")
+		if err != nil {
+			t.Fatalf("find by glob: %v", err)
+		}
+		if len(results) != 1 {
+			t.Errorf("expected 1 match for api path, got %d", len(results))
+		}
+		if len(results) > 0 && results[0].ID != "conv.api-style" {
+			t.Errorf("expected conv.api-style, got %s", results[0].ID)
+		}
+
+		// Path matching frontend-style globs
+		results, err = db.FindByGlob("src/web/components/Button.tsx")
+		if err != nil {
+			t.Fatalf("find by glob: %v", err)
+		}
+		if len(results) != 1 {
+			t.Errorf("expected 1 match for frontend path, got %d", len(results))
+		}
+		if len(results) > 0 && results[0].ID != "conv.frontend-style" {
+			t.Errorf("expected conv.frontend-style, got %s", results[0].ID)
+		}
+
+		// Path matching nothing
+		results, err = db.FindByGlob("docs/README.md")
+		if err != nil {
+			t.Fatalf("find by glob: %v", err)
+		}
+		if len(results) != 0 {
+			t.Errorf("expected 0 matches for docs path, got %d", len(results))
+		}
+	})
+
+	// Test Update preserves globs and scopes
+	t.Run("UpdatePreservesGlobsScopes", func(t *testing.T) {
+		p, _ := db.Get("conv.api-style")
+		p.Globs = []string{"src/api/**/*.go", "pkg/handlers/**", "internal/api/**"}
+		p.Scopes = []string{"backend", "api", "infra"}
+		p.UpdatedAt = time.Now().Truncate(time.Second)
+
+		if err := db.Update(p); err != nil {
+			t.Fatalf("update: %v", err)
+		}
+
+		got, _ := db.Get("conv.api-style")
+		if len(got.Globs) != 3 {
+			t.Errorf("len(Globs) after update = %d, want 3", len(got.Globs))
+		}
+		if len(got.Scopes) != 3 {
+			t.Errorf("len(Scopes) after update = %d, want 3", len(got.Scopes))
+		}
+	})
+}
+
 func TestSyncFromJSONL(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "pearls-test-*")
 	if err != nil {

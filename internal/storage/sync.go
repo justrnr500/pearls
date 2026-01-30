@@ -198,6 +198,16 @@ func (s *Store) Search(query string, limit int) ([]*pearl.Pearl, error) {
 	return s.db.Search(query, limit)
 }
 
+// FindByScope returns all pearls that belong to the given scope.
+func (s *Store) FindByScope(scope string) ([]*pearl.Pearl, error) {
+	return s.db.FindByScope(scope)
+}
+
+// FindByGlob returns all pearls whose glob patterns match the given file path.
+func (s *Store) FindByGlob(path string) ([]*pearl.Pearl, error) {
+	return s.db.FindByGlob(path)
+}
+
 // SyncFromJSONL rebuilds the database from the JSONL file.
 // This is the "JSONL is source of truth" operation.
 func (s *Store) SyncFromJSONL() error {

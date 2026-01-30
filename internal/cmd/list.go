@@ -23,6 +23,7 @@ Examples:
   pearls list --namespace db.postgres
   pearls list --tag pii
   pearls list --status active
+  pearls list --scope backend
   pearls list --json`,
 	Aliases: []string{"ls"},
 	RunE:    runList,
@@ -33,6 +34,7 @@ var (
 	listType      string
 	listStatus    string
 	listTag       string
+	listScope     string
 	listJSON      bool
 	listLimit     int
 )
@@ -43,6 +45,7 @@ func init() {
 	listCmd.Flags().StringVarP(&listType, "type", "t", "", "Filter by type")
 	listCmd.Flags().StringVarP(&listStatus, "status", "s", "", "Filter by status")
 	listCmd.Flags().StringVar(&listTag, "tag", "", "Filter by tag")
+	listCmd.Flags().StringVar(&listScope, "scope", "", "Filter by scope")
 	listCmd.Flags().BoolVar(&listJSON, "json", false, "Output as JSON")
 	listCmd.Flags().IntVar(&listLimit, "limit", 0, "Limit number of results")
 }
@@ -59,6 +62,7 @@ func runList(cmd *cobra.Command, args []string) error {
 		Type:      listType,
 		Status:    listStatus,
 		Tag:       listTag,
+		Scope:     listScope,
 		Limit:     listLimit,
 	}
 

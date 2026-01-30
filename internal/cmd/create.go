@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -33,6 +34,8 @@ var (
 	createType        string
 	createDescription string
 	createTags        []string
+	createGlobs       string
+	createScopes      string
 	createJSON        bool
 )
 
@@ -41,6 +44,8 @@ func init() {
 	createCmd.Flags().StringVarP(&createType, "type", "t", "table", "Asset type (table, schema, database, api, endpoint, file, bucket, pipeline, dashboard, query, custom)")
 	createCmd.Flags().StringVarP(&createDescription, "description", "d", "", "Brief description")
 	createCmd.Flags().StringSliceVar(&createTags, "tag", nil, "Tags (can be repeated)")
+	createCmd.Flags().StringVar(&createGlobs, "globs", "", "Comma-separated file glob patterns for push-based context injection")
+	createCmd.Flags().StringVar(&createScopes, "scopes", "", "Comma-separated scope names for scope-based injection")
 	createCmd.Flags().BoolVar(&createJSON, "json", false, "Output as JSON")
 }
 
@@ -52,10 +57,10 @@ func runCreate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid ID %q: %w", id, err)
 	}
 
-	// Validate type
+	// Validate type (free-form: lowercase alphanumeric + hyphens)
 	assetType := pearl.AssetType(createType)
 	if !assetType.IsValid() {
-		return fmt.Errorf("invalid type %q: must be one of: table, schema, database, api, endpoint, file, bucket, pipeline, dashboard, query, custom", createType)
+		return fmt.Errorf("invalid type %q: must be lowercase alphanumeric + hyphens, starting with a letter", createType)
 	}
 
 	store, _, err := getStore()
@@ -71,6 +76,24 @@ func runCreate(cmd *cobra.Command, args []string) error {
 	}
 	if existing != nil {
 		return fmt.Errorf("pearl %q already exists", id)
+	}
+
+	// Parse globs and scopes from comma-separated strings
+	var globs []string
+	if createGlobs != "" {
+		globs = strings.Split(createGlobs, ",")
+	}
+	var scopes []string
+	if createScopes != "" {
+		scopes = strings.Split(createScopes, ",")
+	}
+
+	// Validate globs and scopes
+	if err := pearl.ValidateGlobs(globs); err != nil {
+		return fmt.Errorf("invalid --globs: %w", err)
+	}
+	if err := pearl.ValidateScopes(scopes); err != nil {
+		return fmt.Errorf("invalid --scopes: %w", err)
 	}
 
 	// Parse namespace and name from ID
@@ -89,6 +112,8 @@ func runCreate(cmd *cobra.Command, args []string) error {
 		Namespace:   namespace,
 		Type:        assetType,
 		Tags:        createTags,
+		Globs:       globs,
+		Scopes:      scopes,
 		Description: createDescription,
 		Status:      pearl.StatusActive,
 		CreatedAt:   now,

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	sqlite_vec "github.com/asg017/sqlite-vec-go-bindings/cgo"
+	"github.com/bmatcuk/doublestar/v4"
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/justrnr500/pearls/internal/pearl"
@@ -25,6 +26,8 @@ CREATE TABLE IF NOT EXISTS pearls (
 	namespace TEXT NOT NULL DEFAULT '',
 	type TEXT NOT NULL,
 	tags TEXT NOT NULL DEFAULT '[]',
+	globs TEXT NOT NULL DEFAULT '[]',
+	scopes TEXT NOT NULL DEFAULT '[]',
 	description TEXT NOT NULL DEFAULT '',
 	content_path TEXT NOT NULL DEFAULT '',
 	content_hash TEXT NOT NULL DEFAULT '',
@@ -105,6 +108,16 @@ func (d *DB) Insert(p *pearl.Pearl) error {
 		return fmt.Errorf("marshal tags: %w", err)
 	}
 
+	globs, err := json.Marshal(p.Globs)
+	if err != nil {
+		return fmt.Errorf("marshal globs: %w", err)
+	}
+
+	scopes, err := json.Marshal(p.Scopes)
+	if err != nil {
+		return fmt.Errorf("marshal scopes: %w", err)
+	}
+
 	refs, err := json.Marshal(p.References)
 	if err != nil {
 		return fmt.Errorf("marshal refs: %w", err)
@@ -119,10 +132,10 @@ func (d *DB) Insert(p *pearl.Pearl) error {
 	}
 
 	_, err = d.db.Exec(`
-		INSERT INTO pearls (id, name, namespace, type, tags, description, content_path, content_hash, refs, parent, connection, created_at, updated_at, created_by, status)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO pearls (id, name, namespace, type, tags, globs, scopes, description, content_path, content_hash, refs, parent, connection, created_at, updated_at, created_by, status)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`,
-		p.ID, p.Name, p.Namespace, p.Type, tags, p.Description,
+		p.ID, p.Name, p.Namespace, p.Type, tags, globs, scopes, p.Description,
 		p.ContentPath, p.ContentHash, refs, p.Parent, connJSON,
 		p.CreatedAt.Format(time.RFC3339), p.UpdatedAt.Format(time.RFC3339),
 		p.CreatedBy, p.Status,
@@ -141,6 +154,16 @@ func (d *DB) Update(p *pearl.Pearl) error {
 		return fmt.Errorf("marshal tags: %w", err)
 	}
 
+	globs, err := json.Marshal(p.Globs)
+	if err != nil {
+		return fmt.Errorf("marshal globs: %w", err)
+	}
+
+	scopes, err := json.Marshal(p.Scopes)
+	if err != nil {
+		return fmt.Errorf("marshal scopes: %w", err)
+	}
+
 	refs, err := json.Marshal(p.References)
 	if err != nil {
 		return fmt.Errorf("marshal refs: %w", err)
@@ -156,12 +179,12 @@ func (d *DB) Update(p *pearl.Pearl) error {
 
 	result, err := d.db.Exec(`
 		UPDATE pearls SET
-			name = ?, namespace = ?, type = ?, tags = ?, description = ?,
+			name = ?, namespace = ?, type = ?, tags = ?, globs = ?, scopes = ?, description = ?,
 			content_path = ?, content_hash = ?, refs = ?, parent = ?,
 			connection = ?, updated_at = ?, created_by = ?, status = ?
 		WHERE id = ?
 	`,
-		p.Name, p.Namespace, p.Type, tags, p.Description,
+		p.Name, p.Namespace, p.Type, tags, globs, scopes, p.Description,
 		p.ContentPath, p.ContentHash, refs, p.Parent, connJSON,
 		p.UpdatedAt.Format(time.RFC3339), p.CreatedBy, p.Status,
 		p.ID,
@@ -202,7 +225,7 @@ func (d *DB) Delete(id string) error {
 // Get retrieves a pearl by ID.
 func (d *DB) Get(id string) (*pearl.Pearl, error) {
 	row := d.db.QueryRow(`
-		SELECT id, name, namespace, type, tags, description, content_path, content_hash, refs, parent, connection, created_at, updated_at, created_by, status
+		SELECT id, name, namespace, type, tags, globs, scopes, description, content_path, content_hash, refs, parent, connection, created_at, updated_at, created_by, status
 		FROM pearls WHERE id = ?
 	`, id)
 
@@ -211,7 +234,7 @@ func (d *DB) Get(id string) (*pearl.Pearl, error) {
 
 // List retrieves all pearls matching the given filters.
 func (d *DB) List(opts ListOptions) ([]*pearl.Pearl, error) {
-	query := "SELECT id, name, namespace, type, tags, description, content_path, content_hash, refs, parent, connection, created_at, updated_at, created_by, status FROM pearls WHERE 1=1"
+	query := "SELECT id, name, namespace, type, tags, globs, scopes, description, content_path, content_hash, refs, parent, connection, created_at, updated_at, created_by, status FROM pearls WHERE 1=1"
 	args := []interface{}{}
 
 	if opts.Namespace != "" {
@@ -229,6 +252,10 @@ func (d *DB) List(opts ListOptions) ([]*pearl.Pearl, error) {
 	if opts.Tag != "" {
 		query += " AND tags LIKE ?"
 		args = append(args, "%\""+opts.Tag+"\"%")
+	}
+	if opts.Scope != "" {
+		query += " AND scopes LIKE ?"
+		args = append(args, fmt.Sprintf(`%%"%s"%%`, opts.Scope))
 	}
 
 	query += " ORDER BY namespace, name"
@@ -261,6 +288,7 @@ type ListOptions struct {
 	Type      string
 	Status    string
 	Tag       string
+	Scope     string
 	Limit     int
 }
 
@@ -273,7 +301,7 @@ func (d *DB) Search(query string, limit int) ([]*pearl.Pearl, error) {
 	// Simple LIKE-based search across searchable fields
 	pattern := "%" + query + "%"
 	rows, err := d.db.Query(`
-		SELECT id, name, namespace, type, tags, description, content_path, content_hash, refs, parent, connection, created_at, updated_at, created_by, status
+		SELECT id, name, namespace, type, tags, globs, scopes, description, content_path, content_hash, refs, parent, connection, created_at, updated_at, created_by, status
 		FROM pearls
 		WHERE id LIKE ? OR name LIKE ? OR namespace LIKE ? OR description LIKE ? OR tags LIKE ?
 		ORDER BY namespace, name
@@ -334,6 +362,69 @@ func (d *DB) FindReferencingPearls(targetID string) ([]string, error) {
 	return ids, rows.Err()
 }
 
+// FindByScope returns all pearls whose scopes JSON array contains the given scope string.
+func (d *DB) FindByScope(scope string) ([]*pearl.Pearl, error) {
+	pattern := fmt.Sprintf(`%%"%s"%%`, scope)
+	rows, err := d.db.Query(`
+		SELECT id, name, namespace, type, tags, globs, scopes, description, content_path, content_hash, refs, parent, connection, created_at, updated_at, created_by, status
+		FROM pearls
+		WHERE scopes LIKE ?
+		ORDER BY namespace, name
+	`, pattern)
+	if err != nil {
+		return nil, fmt.Errorf("query pearls by scope: %w", err)
+	}
+	defer rows.Close()
+
+	var pearls []*pearl.Pearl
+	for rows.Next() {
+		p, err := scanPearlRows(rows)
+		if err != nil {
+			return nil, err
+		}
+		pearls = append(pearls, p)
+	}
+
+	return pearls, rows.Err()
+}
+
+// FindByGlob returns all pearls that have a glob pattern matching the given path.
+// Since SQLite cannot evaluate doublestar glob patterns, this method loads all
+// pearls with non-empty globs and filters in Go.
+func (d *DB) FindByGlob(path string) ([]*pearl.Pearl, error) {
+	rows, err := d.db.Query(`
+		SELECT id, name, namespace, type, tags, globs, scopes, description, content_path, content_hash, refs, parent, connection, created_at, updated_at, created_by, status
+		FROM pearls
+		WHERE globs != '[]' AND globs != '' AND globs != 'null'
+		ORDER BY namespace, name
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("query pearls with globs: %w", err)
+	}
+	defer rows.Close()
+
+	var matched []*pearl.Pearl
+	for rows.Next() {
+		p, err := scanPearlRows(rows)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, g := range p.Globs {
+			ok, err := doublestar.Match(g, path)
+			if err != nil {
+				continue // skip invalid patterns
+			}
+			if ok {
+				matched = append(matched, p)
+				break
+			}
+		}
+	}
+
+	return matched, rows.Err()
+}
+
 // scanner interface for both sql.Row and sql.Rows
 type scanner interface {
 	Scan(dest ...interface{}) error
@@ -341,11 +432,11 @@ type scanner interface {
 
 func scanPearl(row *sql.Row) (*pearl.Pearl, error) {
 	var p pearl.Pearl
-	var tags, refs, connJSON []byte
+	var tags, globs, scopes, refs, connJSON []byte
 	var createdAt, updatedAt string
 
 	err := row.Scan(
-		&p.ID, &p.Name, &p.Namespace, &p.Type, &tags, &p.Description,
+		&p.ID, &p.Name, &p.Namespace, &p.Type, &tags, &globs, &scopes, &p.Description,
 		&p.ContentPath, &p.ContentHash, &refs, &p.Parent, &connJSON,
 		&createdAt, &updatedAt, &p.CreatedBy, &p.Status,
 	)
@@ -358,6 +449,12 @@ func scanPearl(row *sql.Row) (*pearl.Pearl, error) {
 
 	if err := json.Unmarshal(tags, &p.Tags); err != nil {
 		return nil, fmt.Errorf("unmarshal tags: %w", err)
+	}
+	if err := json.Unmarshal(globs, &p.Globs); err != nil {
+		return nil, fmt.Errorf("unmarshal globs: %w", err)
+	}
+	if err := json.Unmarshal(scopes, &p.Scopes); err != nil {
+		return nil, fmt.Errorf("unmarshal scopes: %w", err)
 	}
 	if err := json.Unmarshal(refs, &p.References); err != nil {
 		return nil, fmt.Errorf("unmarshal refs: %w", err)
@@ -377,11 +474,11 @@ func scanPearl(row *sql.Row) (*pearl.Pearl, error) {
 
 func scanPearlRows(rows *sql.Rows) (*pearl.Pearl, error) {
 	var p pearl.Pearl
-	var tags, refs, connJSON []byte
+	var tags, globs, scopes, refs, connJSON []byte
 	var createdAt, updatedAt string
 
 	err := rows.Scan(
-		&p.ID, &p.Name, &p.Namespace, &p.Type, &tags, &p.Description,
+		&p.ID, &p.Name, &p.Namespace, &p.Type, &tags, &globs, &scopes, &p.Description,
 		&p.ContentPath, &p.ContentHash, &refs, &p.Parent, &connJSON,
 		&createdAt, &updatedAt, &p.CreatedBy, &p.Status,
 	)
@@ -391,6 +488,12 @@ func scanPearlRows(rows *sql.Rows) (*pearl.Pearl, error) {
 
 	if err := json.Unmarshal(tags, &p.Tags); err != nil {
 		return nil, fmt.Errorf("unmarshal tags: %w", err)
+	}
+	if err := json.Unmarshal(globs, &p.Globs); err != nil {
+		return nil, fmt.Errorf("unmarshal globs: %w", err)
+	}
+	if err := json.Unmarshal(scopes, &p.Scopes); err != nil {
+		return nil, fmt.Errorf("unmarshal scopes: %w", err)
 	}
 	if err := json.Unmarshal(refs, &p.References); err != nil {
 		return nil, fmt.Errorf("unmarshal refs: %w", err)

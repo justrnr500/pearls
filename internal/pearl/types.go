@@ -2,12 +2,19 @@
 package pearl
 
 import (
+	"fmt"
+	"regexp"
 	"time"
+
+	"github.com/bmatcuk/doublestar/v4"
 )
 
-// AssetType represents the type of data asset.
+// AssetType represents the type of a pearl. Free-form string validated as
+// non-empty, lowercase alphanumeric + hyphens.
 type AssetType string
 
+// Common asset type constants for convenience. The type system is open —
+// any string matching the validation pattern is accepted.
 const (
 	TypeTable     AssetType = "table"
 	TypeSchema    AssetType = "schema"
@@ -22,22 +29,41 @@ const (
 	TypeCustom    AssetType = "custom"
 )
 
-// ValidAssetTypes returns all valid asset types.
-func ValidAssetTypes() []AssetType {
-	return []AssetType{
-		TypeTable, TypeSchema, TypeDatabase, TypeAPI, TypeEndpoint,
-		TypeFile, TypeBucket, TypePipeline, TypeDashboard, TypeQuery, TypeCustom,
-	}
+// assetTypePattern matches valid asset types: lowercase alphanumeric + hyphens,
+// must start with a letter.
+var assetTypePattern = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
+
+// IsValid returns true if the asset type matches the format: non-empty,
+// lowercase alphanumeric + hyphens, starting with a letter.
+func (t AssetType) IsValid() bool {
+	return assetTypePattern.MatchString(string(t))
 }
 
-// IsValid returns true if the asset type is valid.
-func (t AssetType) IsValid() bool {
-	for _, valid := range ValidAssetTypes() {
-		if t == valid {
-			return true
+// scopePattern matches valid scope strings: lowercase alphanumeric + hyphens,
+// must start with a letter.
+var scopePattern = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
+
+// ValidateScopes checks that all scope strings are valid.
+func ValidateScopes(scopes []string) error {
+	for _, s := range scopes {
+		if !scopePattern.MatchString(s) {
+			return fmt.Errorf("invalid scope %q: must be lowercase alphanumeric + hyphens, starting with a letter", s)
 		}
 	}
-	return false
+	return nil
+}
+
+// ValidateGlobs checks that all glob patterns have valid syntax.
+func ValidateGlobs(globs []string) error {
+	for _, g := range globs {
+		if g == "" {
+			return fmt.Errorf("glob pattern cannot be empty")
+		}
+		if !doublestar.ValidatePattern(g) {
+			return fmt.Errorf("invalid glob pattern %q", g)
+		}
+	}
+	return nil
 }
 
 // Status represents the lifecycle status of a pearl.
@@ -82,8 +108,10 @@ type Pearl struct {
 	Namespace string `json:"namespace"` // Dot-separated path: "db.postgres"
 
 	// Classification
-	Type AssetType `json:"type"` // table, schema, database, api, file, bucket, etc.
-	Tags []string  `json:"tags"` // Freeform tags: ["pii", "analytics", "deprecated"]
+	Type   AssetType `json:"type"`   // Free-form: table, api, convention, brainstorm, etc.
+	Tags   []string  `json:"tags"`   // Freeform tags: ["pii", "analytics", "deprecated"]
+	Globs  []string  `json:"globs,omitempty"`  // File-path glob patterns for push-based context injection
+	Scopes []string  `json:"scopes,omitempty"` // Contextual groupings for scope-based injection
 
 	// Content
 	Description string `json:"description"`  // Brief one-liner

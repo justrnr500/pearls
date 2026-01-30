@@ -9,7 +9,7 @@ import (
 )
 
 var contextCmd = &cobra.Command{
-	Use:   "context <id> [id...]",
+	Use:   "context [id...]",
 	Short: "Generate context for AI agents",
 	Long: `Generate concatenated markdown context from one or more pearls.
 
@@ -19,23 +19,33 @@ suitable for injection into AI agent prompts.
 Examples:
   pearls context db.postgres.users
   pearls context db.postgres.users db.postgres.orders
-  pearls context db.postgres.users --with-refs`,
-	Args: cobra.MinimumNArgs(1),
+  pearls context db.postgres.users --with-refs
+  pearls context --for src/api/handler.go
+  pearls context --scope backend
+  pearls context --for src/api/handler.go --scope backend`,
 	RunE: runContext,
 }
 
 var (
 	contextWithRefs bool
 	contextBrief    bool
+	contextFor      string
+	contextScope    string
 )
 
 func init() {
 	rootCmd.AddCommand(contextCmd)
 	contextCmd.Flags().BoolVar(&contextWithRefs, "with-refs", false, "Include referenced pearls")
 	contextCmd.Flags().BoolVar(&contextBrief, "brief", false, "Only include metadata, not full content")
+	contextCmd.Flags().StringVar(&contextFor, "for", "", "File path (relative to repo root) to match pearls by glob")
+	contextCmd.Flags().StringVar(&contextScope, "scope", "", "Scope name to match pearls")
 }
 
 func runContext(cmd *cobra.Command, args []string) error {
+	if len(args) == 0 && contextFor == "" && contextScope == "" {
+		return fmt.Errorf("at least one pearl ID, --for, or --scope must be provided")
+	}
+
 	store, _, err := getStore()
 	if err != nil {
 		return err
@@ -51,6 +61,34 @@ func runContext(cmd *cobra.Command, args []string) error {
 		if !seen[id] {
 			ids = append(ids, id)
 			seen[id] = true
+		}
+	}
+
+	// Add pearls matched by --for flag
+	if contextFor != "" {
+		matched, err := store.FindByGlob(contextFor)
+		if err != nil {
+			return fmt.Errorf("find by glob: %w", err)
+		}
+		for _, p := range matched {
+			if !seen[p.ID] {
+				ids = append(ids, p.ID)
+				seen[p.ID] = true
+			}
+		}
+	}
+
+	// Add pearls matched by --scope flag
+	if contextScope != "" {
+		matched, err := store.FindByScope(contextScope)
+		if err != nil {
+			return fmt.Errorf("find by scope: %w", err)
+		}
+		for _, p := range matched {
+			if !seen[p.ID] {
+				ids = append(ids, p.ID)
+				seen[p.ID] = true
+			}
 		}
 	}
 

@@ -11,6 +11,7 @@ func TestAssetTypeIsValid(t *testing.T) {
 		input AssetType
 		want  bool
 	}{
+		// Built-in constants
 		{TypeTable, true},
 		{TypeSchema, true},
 		{TypeDatabase, true},
@@ -22,8 +23,19 @@ func TestAssetTypeIsValid(t *testing.T) {
 		{TypeDashboard, true},
 		{TypeQuery, true},
 		{TypeCustom, true},
-		{AssetType("invalid"), false},
+		// Free-form types (new)
+		{AssetType("convention"), true},
+		{AssetType("brainstorm"), true},
+		{AssetType("runbook"), true},
+		{AssetType("decision"), true},
+		{AssetType("my-script"), true},
+		// Invalid
 		{AssetType(""), false},
+		{AssetType("UPPER"), false},
+		{AssetType("has spaces"), false},
+		{AssetType("has_underscore"), false},
+		{AssetType("123start"), false},
+		{AssetType("-leading-hyphen"), false},
 	}
 
 	for _, tt := range tests {
@@ -31,6 +43,58 @@ func TestAssetTypeIsValid(t *testing.T) {
 			got := tt.input.IsValid()
 			if got != tt.want {
 				t.Errorf("AssetType(%q).IsValid() = %v, want %v", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestValidateScopes(t *testing.T) {
+	tests := []struct {
+		name    string
+		scopes  []string
+		wantErr bool
+	}{
+		{"valid scopes", []string{"payments", "auth", "stripe"}, false},
+		{"valid with hyphens", []string{"error-handling", "api-v2"}, false},
+		{"empty list", []string{}, false},
+		{"nil list", nil, false},
+		{"invalid uppercase", []string{"Payments"}, true},
+		{"invalid spaces", []string{"my scope"}, true},
+		{"invalid empty string", []string{""}, true},
+		{"invalid underscore", []string{"my_scope"}, true},
+		{"mixed valid and invalid", []string{"payments", "BAD"}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateScopes(tt.scopes)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateScopes(%v) error = %v, wantErr %v", tt.scopes, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateGlobs(t *testing.T) {
+	tests := []struct {
+		name    string
+		globs   []string
+		wantErr bool
+	}{
+		{"valid single glob", []string{"src/payments/**"}, false},
+		{"valid multiple globs", []string{"src/payments/**/*.ts", "src/billing/**"}, false},
+		{"valid simple pattern", []string{"*.go"}, false},
+		{"empty list", []string{}, false},
+		{"nil list", nil, false},
+		{"invalid empty string", []string{""}, true},
+		{"invalid bad pattern", []string{"["}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateGlobs(tt.globs)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateGlobs(%v) error = %v, wantErr %v", tt.globs, err, tt.wantErr)
 			}
 		})
 	}
@@ -92,6 +156,8 @@ func TestPearlJSONMarshal(t *testing.T) {
 		Namespace:   "db.postgres",
 		Type:        TypeTable,
 		Tags:        []string{"pii", "core"},
+		Globs:       []string{"src/models/user/**", "src/db/users/**"},
+		Scopes:      []string{"users", "auth"},
 		Description: "Core user account information",
 		ContentPath: "content/db/postgres/users.md",
 		ContentHash: "abc123",
@@ -137,6 +203,12 @@ func TestPearlJSONMarshal(t *testing.T) {
 	if len(decoded.Tags) != 2 {
 		t.Errorf("len(Tags) = %d, want 2", len(decoded.Tags))
 	}
+	if len(decoded.Globs) != 2 {
+		t.Errorf("len(Globs) = %d, want 2", len(decoded.Globs))
+	}
+	if len(decoded.Scopes) != 2 {
+		t.Errorf("len(Scopes) = %d, want 2", len(decoded.Scopes))
+	}
 }
 
 func TestPearlJSONOmitEmpty(t *testing.T) {
@@ -169,5 +241,11 @@ func TestPearlJSONOmitEmpty(t *testing.T) {
 	}
 	if _, ok := raw["parent"]; ok {
 		t.Error("parent should be omitted when empty")
+	}
+	if _, ok := raw["globs"]; ok {
+		t.Error("globs should be omitted when empty")
+	}
+	if _, ok := raw["scopes"]; ok {
+		t.Error("scopes should be omitted when empty")
 	}
 }

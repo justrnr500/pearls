@@ -6,7 +6,9 @@ toolchain go1.24.12
 
 require (
 	github.com/asg017/sqlite-vec-go-bindings v0.1.6
+	github.com/bmatcuk/doublestar/v4 v4.10.0
 	github.com/go-sql-driver/mysql v1.9.3
+	github.com/joho/godotenv v1.5.1
 	github.com/knights-analytics/hugot v0.6.2
 	github.com/lib/pq v1.11.1
 	github.com/mattn/go-sqlite3 v1.14.33
@@ -29,7 +31,6 @@ require (
 	github.com/gomlx/onnx-gomlx v0.3.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/knights-analytics/ortgenai v0.0.3 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect

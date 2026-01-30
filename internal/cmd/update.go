@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -21,7 +22,10 @@ Examples:
   pearls update db.postgres.users --add-tag sensitive
   pearls update db.postgres.users --remove-tag deprecated
   pearls update db.postgres.users --status deprecated
-  pearls update db.postgres.users --add-ref db.postgres.organizations`,
+  pearls update db.postgres.users --add-ref db.postgres.organizations
+  pearls update db.postgres.users --type view
+  pearls update db.postgres.users --globs "src/models/**/*.go,db/migrations/*.sql"
+  pearls update db.postgres.users --scopes backend,data-eng`,
 	Args: cobra.ExactArgs(1),
 	RunE: runUpdate,
 }
@@ -29,6 +33,9 @@ Examples:
 var (
 	updateDescription string
 	updateStatus      string
+	updateType        string
+	updateGlobs       string
+	updateScopes      string
 	updateAddTags     []string
 	updateRemoveTags  []string
 	updateAddRefs     []string
@@ -40,6 +47,9 @@ func init() {
 	rootCmd.AddCommand(updateCmd)
 	updateCmd.Flags().StringVarP(&updateDescription, "description", "d", "", "Update description")
 	updateCmd.Flags().StringVar(&updateStatus, "status", "", "Update status (active, deprecated, archived)")
+	updateCmd.Flags().StringVarP(&updateType, "type", "t", "", "Update asset type (lowercase alphanumeric + hyphens)")
+	updateCmd.Flags().StringVar(&updateGlobs, "globs", "", "Comma-separated file glob patterns for push-based context injection")
+	updateCmd.Flags().StringVar(&updateScopes, "scopes", "", "Comma-separated scope names for scope-based injection")
 	updateCmd.Flags().StringSliceVar(&updateAddTags, "add-tag", nil, "Add tag(s)")
 	updateCmd.Flags().StringSliceVar(&updateRemoveTags, "remove-tag", nil, "Remove tag(s)")
 	updateCmd.Flags().StringSliceVar(&updateAddRefs, "add-ref", nil, "Add reference(s)")
@@ -80,6 +90,42 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("invalid status %q: must be active, deprecated, or archived", updateStatus)
 		}
 		p.Status = status
+		changed = true
+	}
+
+	// Update type (free-form: lowercase alphanumeric + hyphens)
+	if cmd.Flags().Changed("type") {
+		assetType := pearl.AssetType(updateType)
+		if !assetType.IsValid() {
+			return fmt.Errorf("invalid type %q: must be lowercase alphanumeric + hyphens, starting with a letter", updateType)
+		}
+		p.Type = assetType
+		changed = true
+	}
+
+	// Update globs
+	if cmd.Flags().Changed("globs") {
+		var globs []string
+		if updateGlobs != "" {
+			globs = strings.Split(updateGlobs, ",")
+		}
+		if err := pearl.ValidateGlobs(globs); err != nil {
+			return fmt.Errorf("invalid globs: %w", err)
+		}
+		p.Globs = globs
+		changed = true
+	}
+
+	// Update scopes
+	if cmd.Flags().Changed("scopes") {
+		var scopes []string
+		if updateScopes != "" {
+			scopes = strings.Split(updateScopes, ",")
+		}
+		if err := pearl.ValidateScopes(scopes); err != nil {
+			return fmt.Errorf("invalid scopes: %w", err)
+		}
+		p.Scopes = scopes
 		changed = true
 	}
 
