@@ -1,18 +1,20 @@
 # Pearls
 
-Data asset memory for AI agents.
+Semantic context injection for AI agents.
 
-Pearls is a CLI tool for storing and retrieving structured markdown documentation about data assets -- tables, schemas, database connections, file locations, APIs, and other data sources. It gives AI agents a queryable knowledge base about an organization's data landscape.
+Pearls is a CLI tool for storing, searching, and injecting knowledge into AI agent sessions. It catalogs anything an agent might need -- data schemas, API docs, codebase conventions, architectural decisions, brainstorms, scripts, runbooks -- as searchable markdown. Agents retrieve context via semantic search (pull) or receive it automatically based on file paths and scopes (push).
 
-> Beads gives agents memory about *tasks*. Pearls gives agents memory about *data*.
+> Beads gives agents memory about *tasks*. Pearls gives agents memory about *everything else*.
 
 ## Features
 
 - **Markdown-native** -- Pearl content is plain markdown. Human-readable, version-controllable, LLM-friendly.
 - **Git as database** -- JSONL metadata + markdown content travel with your code. No server required.
 - **Agent-first** -- Every command supports `--json` output. Search is fast and semantic.
-- **Hierarchical** -- Dot-separated namespaces: `db.postgres.users`, `api.stripe.customers`
+- **Push-based context** -- Attach glob patterns and scopes to pearls. Agents get relevant context injected based on what files they're touching or what domain they're working in. Replaces scattered `agent.md` files.
 - **Semantic search** -- Natural language queries powered by local embeddings (all-MiniLM-L6-v2)
+- **Free-form types** -- Not just data assets. Store conventions, brainstorms, API docs, runbooks, decisions -- any knowledge worth preserving.
+- **Hierarchical** -- Dot-separated namespaces: `db.postgres.users`, `api.stripe.customers`
 - **Relationship tracking** -- Pearls reference other pearls, creating a navigable graph
 - **Database introspection** -- Auto-generate pearls from live Postgres, MySQL, or SQLite databases
 - **Health checks** -- `pearls doctor` validates catalog integrity (sync, references, orphans)
@@ -38,32 +40,37 @@ pearls init
 # Create a pearl for a table
 pearls create db.postgres.users --type table -d "Core user accounts"
 
-# Edit the generated markdown
-$EDITOR .pearls/content/db/postgres/users.md
+# Create a convention pearl with globs (push-based context)
+pearls create conventions.error-handling --type convention \
+  -d "How we handle errors in this codebase" \
+  --globs "src/**/*.ts" --scopes "conventions"
 
-# Create more pearls and link them
-pearls create db.postgres.orders --type table -d "Customer orders"
-pearls update db.postgres.orders --add-ref db.postgres.users
+# Create an API pearl scoped to payment code
+pearls create api.stripe.customers --type api \
+  -d "Stripe customer API integration" \
+  --globs "src/payments/**,src/billing/**" --scopes "payments,stripe"
+
+# Edit the generated markdown
+$EDITOR .pearls/content/conventions/error-handling.md
 
 # Or auto-generate from a live database
 pearls introspect postgres --prefix db.postgres
 
-# Search
-pearls search "customer data"
+# Pull: semantic search
 pearls search "where is payment info stored" --semantic
 
-# View relationships
-pearls refs db.postgres.users
+# Push: get context for a file path (matches globs)
+pearls context --for src/payments/checkout.ts
 
-# Generate context for an agent prompt
-pearls context db.postgres.users db.postgres.orders
+# Push: get context for a scope
+pearls context --scope payments
 
 # Check catalog health
 pearls doctor
 
 # Commit to git
 git add .pearls/
-git commit -m "Add data catalog"
+git commit -m "Add knowledge catalog"
 ```
 
 ## Commands
@@ -82,19 +89,23 @@ Creates `.pearls/` with config, SQLite cache, JSONL metadata, and content direct
 
 ### `pearls create`
 
-Create a new pearl to document a data asset.
+Create a new pearl.
 
 ```bash
 pearls create db.postgres.users --type table
 pearls create api.stripe.customers --type api -d "Stripe customer records"
-pearls create db.postgres.orders --type table --tag pii --tag core
-pearls create warehouse.snowflake.metrics --type query --json
+pearls create conventions.error-handling --type convention \
+  --globs "src/**/*.ts" --scopes "conventions"
+pearls create decisions.auth-redesign --type brainstorm \
+  --scopes "auth,architecture" -d "Auth system redesign discussion"
 ```
 
 **Flags:**
-- `--type, -t` -- Asset type: `table`, `schema`, `database`, `api`, `endpoint`, `file`, `bucket`, `pipeline`, `dashboard`, `query`, `custom` (default: `table`)
+- `--type, -t` -- Pearl type. Free-form string (lowercase alphanumeric + hyphens). Common types: `table`, `schema`, `api`, `convention`, `brainstorm`, `runbook`, `decision`, `script` (default: `table`)
 - `--description, -d` -- Brief description
 - `--tag` -- Tags (repeatable)
+- `--globs` -- Comma-separated file glob patterns for push-based context injection (e.g., `"src/payments/**,src/billing/**"`)
+- `--scopes` -- Comma-separated scope names for scope-based injection (e.g., `"payments,stripe"`)
 - `--json` -- JSON output
 
 ### `pearls show`
@@ -114,8 +125,10 @@ List pearls with optional filtering.
 ```bash
 pearls list
 pearls list --type table
+pearls list --type convention
 pearls list --namespace db.postgres
 pearls list --tag pii
+pearls list --scope payments
 pearls list --status active
 pearls list --json
 ```
@@ -165,7 +178,9 @@ pearls update db.postgres.users --add-tag sensitive
 pearls update db.postgres.users --remove-tag deprecated
 pearls update db.postgres.users --status deprecated
 pearls update db.postgres.users --add-ref db.postgres.organizations
-pearls update db.postgres.users --remove-ref db.postgres.old_table
+pearls update db.postgres.users --type convention
+pearls update db.postgres.users --globs "src/models/user/**"
+pearls update db.postgres.users --scopes "users,auth"
 ```
 
 ### `pearls delete`
@@ -207,13 +222,29 @@ Referenced by (incoming):
 
 ### `pearls context`
 
-Generate concatenated markdown for AI agent prompts.
+Generate concatenated markdown for AI agent prompts. Supports both pull (by ID) and push (by file path or scope) retrieval.
 
 ```bash
+# Pull: request specific pearls by ID
 pearls context db.postgres.users db.postgres.orders
 pearls context db.postgres.users --with-refs   # Include referenced pearls
 pearls context db.postgres.users --brief       # Metadata only, no content
+
+# Push: get context for a file path (matches pearl globs)
+pearls context --for src/payments/checkout.ts
+
+# Push: get context for a scope
+pearls context --scope payments
+
+# Push: combine path and scope (union of results)
+pearls context --for src/payments/checkout.ts --scope auth
 ```
+
+**Flags:**
+- `--for` -- File path (relative to repo root) to match against pearl glob patterns
+- `--scope` -- Scope name to match against pearl scopes
+- `--with-refs` -- Include referenced pearls
+- `--brief` -- Metadata only, no markdown content
 
 ### `pearls sync`
 
@@ -345,51 +376,48 @@ vector_search:
 
 ## Agent Integration
 
+### Three Retrieval Layers
+
+| Layer | Mechanism | Use case |
+|-------|-----------|----------|
+| Pull  | Semantic search | Agent asks "what do I need to know about X?" |
+| Push  | Glob matching | Agent working in a file path gets relevant context |
+| Push  | Scope matching | Agent declares what domain it's working in |
+
+### Push: Replace Scattered agent.md Files
+
+Instead of maintaining `CLAUDE.md` or `agent.md` files in every directory, attach glob patterns to pearls. When an agent is working in `src/payments/`, it can pull all relevant context with one command:
+
+```bash
+pearls context --for src/payments/checkout.ts
+```
+
+This returns every pearl whose globs match that path -- API docs, conventions, schema info -- without needing a file in that directory.
+
+### Pull: Semantic Search
+
+```bash
+pearls search "how do we handle payment errors" --semantic --json
+```
+
 ### JSON Output
 
 All commands support `--json` for structured output:
 
 ```bash
-pearls search "customer data" --json
-```
-
-```json
-{
-  "query": "customer data",
-  "results": [
-    {
-      "id": "db.postgres.customers",
-      "type": "table",
-      "status": "active",
-      "description": "Customer account records"
-    }
-  ],
-  "count": 1
-}
-```
-
-### Context Injection
-
-Generate markdown context for LLM prompts:
-
-```bash
-# Get full documentation for relevant assets
-pearls context db.postgres.users db.postgres.orders
-
-# Include all referenced assets
-pearls context db.postgres.orders --with-refs
+pearls context --scope payments --json
 ```
 
 ### Workflow with Beads
 
-Pearls complements [beads](https://github.com/steveyegge/beads) for data work:
+Pearls complements [beads](https://github.com/steveyegge/beads) for agent work:
 
 ```bash
-bd ready                                        # Get next task
-pearls search "customer churn" --semantic --json # Find relevant data
-pearls context warehouse.snowflake.user_cohorts  # Get full details
+bd ready                                             # Get next task
+pearls context --for src/payments/checkout.ts        # Get relevant context
+pearls search "customer churn" --semantic             # Find more knowledge
 # ... do work ...
-bd close bd-a3f8                                 # Complete task
+bd close bd-a3f8                                      # Complete task
 ```
 
 ## Content Templates

@@ -75,26 +75,39 @@ const (
 
 func onboardTemplate() string {
 	return `<!-- pearls:start -->
-## Pearls - Data Asset Memory
+## Pearls - Semantic Context Injection
 
-This project uses Pearls to document data assets (tables, schemas, APIs, pipelines, etc.).
+This project uses Pearls to store and inject knowledge into your sessions — data schemas, API docs, codebase conventions, architectural decisions, brainstorms, and more.
 
-### Quick Reference
-- ` + "`pl list`" + ` — List all documented data assets
-- ` + "`pl search \"query\"`" + ` — Keyword search
+### Context Retrieval
+
+**Push (automatic context based on what you're working on):**
+- ` + "`pl context --for <path>`" + ` — Get context matching a file path (uses pearl glob patterns)
+- ` + "`pl context --scope <scope>`" + ` — Get context for a domain/scope
+- ` + "`pl context --for <path> --scope <scope>`" + ` — Combine both (union)
+
+**Pull (search for what you need):**
 - ` + "`pl search \"query\" --semantic`" + ` — Natural language search
-- ` + "`pl show <id>`" + ` — View asset metadata
-- ` + "`pl cat <id>`" + ` — View full markdown documentation
-- ` + "`pl context <ids...>`" + ` — Get concatenated docs for your context window
-- ` + "`pl create <id> --type <type>`" + ` — Document a new asset
+- ` + "`pl search \"query\"`" + ` — Keyword search
+- ` + "`pl context <ids...>`" + ` — Get specific pearls by ID
+
+### Managing Knowledge
+- ` + "`pl create <id> --type <type>`" + ` — Create a pearl (type is free-form: table, api, convention, brainstorm, runbook, etc.)
+- ` + "`pl create <id> --type convention --globs \"src/**/*.ts\" --scopes \"error-handling\"`" + ` — With push triggers
+- ` + "`pl update <id> --globs \"src/payments/**\" --scopes \"payments\"`" + ` — Add globs/scopes to existing pearl
+- ` + "`pl list`" + ` — List all pearls
+- ` + "`pl list --scope payments`" + ` — List by scope
+- ` + "`pl show <id>`" + ` — View pearl details
+- ` + "`pl cat <id>`" + ` — View full markdown content
 - ` + "`pl refs <id>`" + ` — See relationships
-- ` + "`pl introspect <type> --prefix <ns>`" + ` — Auto-discover from database
+- ` + "`pl introspect <db> --prefix <ns>`" + ` — Auto-discover from database
 - ` + "`pl doctor`" + ` — Check catalog health
 
 ### When to Use Pearls
-- Before querying a database, check ` + "`pl search`" + ` for schema documentation
-- When encountering unfamiliar data assets, check ` + "`pl show`" + `
-- After discovering new data sources, create a pearl with ` + "`pl create`" + `
+- Before working on a feature, run ` + "`pl context --for <file>`" + ` to get relevant context
+- Before querying a database, run ` + "`pl search`" + ` for schema documentation
+- After a brainstorm or design session, save it with ` + "`pl create`" + ` so it persists across sessions
+- When documenting conventions, attach globs so agents automatically get them in the right directories
 - When setting up a new database connection, run ` + "`pl introspect`" + ` to bootstrap docs
 <!-- pearls:end -->`
 }
