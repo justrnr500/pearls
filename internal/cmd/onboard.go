@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -165,63 +166,147 @@ func onboardToFile(path string, force bool) error {
 }
 
 func setupClaudeHooks(projectRoot string) error {
+	// 1. Write the hook script
 	hooksDir := filepath.Join(projectRoot, ".claude", "hooks")
 	if err := os.MkdirAll(hooksDir, 0755); err != nil {
 		return fmt.Errorf("create hooks directory: %w", err)
 	}
 
-	scriptPath := filepath.Join(hooksDir, "context-inject.sh")
+	scriptPath := filepath.Join(hooksDir, "pearls-context.sh")
 	if err := os.WriteFile(scriptPath, []byte(hookScript()), 0755); err != nil {
 		return fmt.Errorf("write hook script: %w", err)
 	}
-
 	fmt.Printf("✓ Created hook script: %s\n", scriptPath)
-	fmt.Println()
-	fmt.Println("To register this hook, add the following to your Claude Code settings")
-	fmt.Println("(.claude/settings.json or equivalent):")
-	fmt.Println()
-	fmt.Printf("  Hook command: %s\n", scriptPath)
-	fmt.Println("  Event: PreToolUse (or your preferred trigger)")
-	fmt.Println()
+
+	// 2. Register the hook in .claude/settings.json
+	settingsPath := filepath.Join(projectRoot, ".claude", "settings.json")
+	if err := registerHook(settingsPath, scriptPath); err != nil {
+		return fmt.Errorf("register hook: %w", err)
+	}
+	fmt.Printf("✓ Registered UserPromptSubmit hook in %s\n", settingsPath)
 
 	return nil
 }
 
+// registerHook adds the pearls hook to .claude/settings.json, merging with
+// any existing configuration.
+func registerHook(settingsPath, scriptPath string) error {
+	// Read existing settings or start fresh
+	settings := make(map[string]interface{})
+	if data, err := os.ReadFile(settingsPath); err == nil {
+		if err := json.Unmarshal(data, &settings); err != nil {
+			return fmt.Errorf("parse existing settings: %w", err)
+		}
+	}
+
+	// Build the hook entry
+	hookEntry := map[string]interface{}{
+		"type":    "command",
+		"command": scriptPath,
+		"timeout": 10,
+	}
+
+	hookGroup := map[string]interface{}{
+		"hooks": []interface{}{hookEntry},
+	}
+
+	// Get or create the hooks map
+	hooks, _ := settings["hooks"].(map[string]interface{})
+	if hooks == nil {
+		hooks = make(map[string]interface{})
+	}
+
+	// Get or create the UserPromptSubmit array
+	existing, _ := hooks["UserPromptSubmit"].([]interface{})
+
+	// Check if pearls hook is already registered (avoid duplicates)
+	alreadyRegistered := false
+	for _, entry := range existing {
+		group, ok := entry.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		hookList, _ := group["hooks"].([]interface{})
+		for _, h := range hookList {
+			hook, ok := h.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			cmd, _ := hook["command"].(string)
+			if strings.Contains(cmd, "pearls-context") {
+				alreadyRegistered = true
+				break
+			}
+		}
+	}
+
+	if !alreadyRegistered {
+		existing = append(existing, hookGroup)
+	}
+
+	hooks["UserPromptSubmit"] = existing
+	settings["hooks"] = hooks
+
+	// Write back
+	data, err := json.MarshalIndent(settings, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal settings: %w", err)
+	}
+
+	return os.WriteFile(settingsPath, append(data, '\n'), 0644)
+}
+
 func hookScript() string {
-	return "#!/usr/bin/env bash\n" +
-		"set -euo pipefail\n" +
-		"\n" +
-		"# Pearls context injection hook for Claude Code.\n" +
-		"# Automatically injects relevant pearl context based on current git changes.\n" +
-		"# All errors are suppressed so this hook never breaks the agent.\n" +
-		"\n" +
-		"{\n" +
-		"  REPO_ROOT=\"$(git rev-parse --show-toplevel 2>/dev/null)\" || exit 0\n" +
-		"\n" +
-		"  # Gather changed files (unstaged + staged), deduplicated.\n" +
-		"  FILES=\"$(\n" +
-		"    { git diff --name-only HEAD 2>/dev/null; git diff --name-only --cached 2>/dev/null; } \\\n" +
-		"      | sort -u \\\n" +
-		"      | head -20\n" +
-		"  )\"\n" +
-		"\n" +
-		"  # Nothing changed — nothing to inject.\n" +
-		"  if [ -z \"$FILES\" ]; then\n" +
-		"    exit 0\n" +
-		"  fi\n" +
-		"\n" +
-		"  OUTPUT=\"\"\n" +
-		"  while IFS= read -r FILE; do\n" +
-		"    RESULT=\"$(pearls context --for \"$FILE\" 2>/dev/null)\" || true\n" +
-		"    if [ -n \"$RESULT\" ]; then\n" +
-		"      OUTPUT=\"${OUTPUT}${RESULT}\"$'\\n'\n" +
-		"    fi\n" +
-		"  done <<< \"$FILES\"\n" +
-		"\n" +
-		"  if [ -n \"$OUTPUT\" ]; then\n" +
-		"    echo \"<!-- pearls: auto-injected context -->\"\n" +
-		"    echo \"$OUTPUT\"\n" +
-		"    echo \"<!-- /pearls -->\"\n" +
-		"  fi\n" +
-		"} 2>/dev/null\n"
+	return `#!/usr/bin/env bash
+# Pearls context injection hook for Claude Code.
+# Runs on UserPromptSubmit — reads hook input from stdin,
+# gathers context for recently changed files, outputs JSON
+# with additionalContext for injection into the agent's session.
+#
+# Exit 0 always — hooks must never block the agent.
+
+{
+  # Read stdin (hook input JSON) — we don't use it yet but must consume it
+  cat > /dev/null
+
+  REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+  cd "$REPO_ROOT"
+
+  # Gather changed files (unstaged + staged), deduplicated, max 20
+  FILES="$(
+    { git diff --name-only HEAD 2>/dev/null; git diff --name-only --cached 2>/dev/null; } \
+      | sort -u \
+      | head -20
+  )"
+
+  # Nothing changed — nothing to inject
+  [ -z "$FILES" ] && exit 0
+
+  CONTEXT=""
+  while IFS= read -r FILE; do
+    RESULT="$(pearls context --for "$FILE" 2>/dev/null)" || true
+    if [ -n "$RESULT" ]; then
+      CONTEXT="${CONTEXT}${RESULT}"$'\n'
+    fi
+  done <<< "$FILES"
+
+  # No matching pearls — exit cleanly
+  [ -z "$CONTEXT" ] && exit 0
+
+  # Output structured JSON for Claude Code context injection
+  python3 -c "
+import json, sys
+ctx = sys.stdin.read()
+print(json.dumps({
+  'hookSpecificOutput': {
+    'hookEventName': 'UserPromptSubmit',
+    'additionalContext': ctx.strip()
+  }
+}))
+" <<< "$CONTEXT"
+
+} 2>/dev/null
+
+exit 0
+`
 }
