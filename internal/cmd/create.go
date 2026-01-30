@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -36,6 +37,7 @@ var (
 	createTags        []string
 	createGlobs       string
 	createScopes      string
+	createContent     string
 	createJSON        bool
 )
 
@@ -46,6 +48,7 @@ func init() {
 	createCmd.Flags().StringSliceVar(&createTags, "tag", nil, "Tags (can be repeated)")
 	createCmd.Flags().StringVar(&createGlobs, "globs", "", "Comma-separated file glob patterns for push-based context injection")
 	createCmd.Flags().StringVar(&createScopes, "scopes", "", "Comma-separated scope names for scope-based injection")
+	createCmd.Flags().StringVar(&createContent, "content", "", `Inline content (use "-" to read from stdin)`)
 	createCmd.Flags().BoolVar(&createJSON, "json", false, "Output as JSON")
 }
 
@@ -121,8 +124,20 @@ func runCreate(cmd *cobra.Command, args []string) error {
 		CreatedBy:   createdBy,
 	}
 
-	// Generate template content
-	content := store.Content().Template(p)
+	// Determine content: inline flag, stdin, or template
+	var content string
+	switch {
+	case createContent == "-":
+		data, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			return fmt.Errorf("read stdin: %w", err)
+		}
+		content = string(data)
+	case createContent != "":
+		content = expandEscapes(createContent)
+	default:
+		content = store.Content().Template(p)
+	}
 
 	// Create the pearl
 	if err := store.Create(p, content); err != nil {
@@ -138,4 +153,12 @@ func runCreate(cmd *cobra.Command, args []string) error {
 	fmt.Printf("✓ Created pearl: %s\n", p.ID)
 	fmt.Printf("  Content: %s\n", p.ContentPath)
 	return nil
+}
+
+// expandEscapes replaces literal \n with real newlines and \t with real tabs.
+// Agents pass single-line strings with escaped newlines.
+func expandEscapes(s string) string {
+	s = strings.ReplaceAll(s, `\n`, "\n")
+	s = strings.ReplaceAll(s, `\t`, "\t")
+	return s
 }

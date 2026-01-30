@@ -98,6 +98,13 @@ pearls create conventions.error-handling --type convention \
   --globs "src/**/*.ts" --scopes "conventions"
 pearls create decisions.auth-redesign --type brainstorm \
   --scopes "auth,architecture" -d "Auth system redesign discussion"
+
+# Inline content (no template, no editor)
+pearls create conventions.logging --type convention \
+  --content "# Logging\n\nUse structured logging with context fields."
+
+# Content from stdin (pipe from another command)
+cat design-notes.md | pearls create decisions.auth --type brainstorm --content -
 ```
 
 **Flags:**
@@ -106,6 +113,7 @@ pearls create decisions.auth-redesign --type brainstorm \
 - `--tag` -- Tags (repeatable)
 - `--globs` -- Comma-separated file glob patterns for push-based context injection (e.g., `"src/payments/**,src/billing/**"`)
 - `--scopes` -- Comma-separated scope names for scope-based injection (e.g., `"payments,stripe"`)
+- `--content` -- Inline content string. Supports `\n` for newlines. Use `--content -` to read from stdin. Skips template generation.
 - `--json` -- JSON output
 
 ### `pearls show`
@@ -313,14 +321,17 @@ Checks:
 
 ### `pearls onboard`
 
-Inject agent instructions into project config files.
+Inject agent instructions into project config files, and optionally set up automatic context injection hooks.
 
 ```bash
 pearls onboard                    # Update CLAUDE.md (default)
 pearls onboard --target agents    # Update agents.md
 pearls onboard --target all       # Update both
 pearls onboard --force            # Overwrite existing pearls section
+pearls onboard --hooks            # Set up Claude Code context injection hook
 ```
+
+The `--hooks` flag creates `.claude/hooks/context-inject.sh`, a shell script that automatically injects relevant pearl context based on your current git changes. Register it as a Claude Code hook for push-based context delivery.
 
 ## Directory Structure
 

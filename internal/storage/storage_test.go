@@ -731,6 +731,185 @@ func TestGlobsAndScopes(t *testing.T) {
 	})
 }
 
+func TestEndToEndContextInjection(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "pearls-e2e-*")
+	if err != nil {
+		t.Fatalf("create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	store, err := NewStore(
+		filepath.Join(tmpDir, "pearls.db"),
+		filepath.Join(tmpDir, "pearls.jsonl"),
+		filepath.Join(tmpDir, "content"),
+	)
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer store.Close()
+
+	now := time.Now()
+
+	t.Run("CreateWithGlobs_FindByGlob", func(t *testing.T) {
+		p := &pearl.Pearl{
+			ID: "conv.error-handling", Name: "error-handling", Namespace: "conv",
+			Type: "convention", Status: pearl.StatusActive,
+			Globs:       []string{"src/api/**/*.go", "internal/handlers/**"},
+			Description: "How we handle errors",
+			CreatedAt:   now, UpdatedAt: now, CreatedBy: "test",
+		}
+		content := "# Error Handling\n\nAlways wrap errors with context."
+
+		if err := store.Create(p, content); err != nil {
+			t.Fatalf("create: %v", err)
+		}
+
+		// Should match
+		results, err := store.FindByGlob("src/api/v1/users.go")
+		if err != nil {
+			t.Fatalf("find by glob: %v", err)
+		}
+		if len(results) != 1 || results[0].ID != "conv.error-handling" {
+			t.Errorf("expected conv.error-handling, got %v", results)
+		}
+
+		// Should not match
+		results, err = store.FindByGlob("docs/README.md")
+		if err != nil {
+			t.Fatalf("find by glob: %v", err)
+		}
+		if len(results) != 0 {
+			t.Errorf("expected 0 results for docs path, got %d", len(results))
+		}
+
+		// Verify content roundtrip
+		gotContent, err := store.GetContent(p)
+		if err != nil {
+			t.Fatalf("get content: %v", err)
+		}
+		if gotContent != content {
+			t.Errorf("content mismatch: got %q, want %q", gotContent, content)
+		}
+	})
+
+	t.Run("CreateWithScopes_FindByScope", func(t *testing.T) {
+		p := &pearl.Pearl{
+			ID: "conv.logging", Name: "logging", Namespace: "conv",
+			Type: "convention", Status: pearl.StatusActive,
+			Scopes:      []string{"backend", "observability"},
+			Description: "Logging conventions",
+			CreatedAt:   now, UpdatedAt: now, CreatedBy: "test",
+		}
+		content := "# Logging\n\nUse structured logging."
+
+		if err := store.Create(p, content); err != nil {
+			t.Fatalf("create: %v", err)
+		}
+
+		results, err := store.FindByScope("backend")
+		if err != nil {
+			t.Fatalf("find by scope: %v", err)
+		}
+		if len(results) != 1 || results[0].ID != "conv.logging" {
+			t.Errorf("expected conv.logging, got %v", results)
+		}
+
+		results, err = store.FindByScope("nonexistent")
+		if err != nil {
+			t.Fatalf("find by scope: %v", err)
+		}
+		if len(results) != 0 {
+			t.Errorf("expected 0 results for nonexistent scope, got %d", len(results))
+		}
+	})
+
+	t.Run("OverlappingGlobsScopes_UnionDedup", func(t *testing.T) {
+		p := &pearl.Pearl{
+			ID: "conv.testing", Name: "testing", Namespace: "conv",
+			Type: "convention", Status: pearl.StatusActive,
+			Globs:       []string{"src/api/**/*.go"},
+			Scopes:      []string{"backend"},
+			Description: "Testing conventions",
+			CreatedAt:   now, UpdatedAt: now, CreatedBy: "test",
+		}
+		content := "# Testing\n\nWrite table-driven tests."
+
+		if err := store.Create(p, content); err != nil {
+			t.Fatalf("create: %v", err)
+		}
+
+		// Both conv.error-handling and conv.testing match src/api/**/*.go
+		globResults, err := store.FindByGlob("src/api/v1/users.go")
+		if err != nil {
+			t.Fatalf("find by glob: %v", err)
+		}
+		if len(globResults) != 2 {
+			t.Errorf("expected 2 glob matches, got %d", len(globResults))
+		}
+
+		// Both conv.logging and conv.testing match backend scope
+		scopeResults, err := store.FindByScope("backend")
+		if err != nil {
+			t.Fatalf("find by scope: %v", err)
+		}
+		if len(scopeResults) != 2 {
+			t.Errorf("expected 2 scope matches, got %d", len(scopeResults))
+		}
+
+		// Simulate union dedup as context.go does
+		seen := make(map[string]bool)
+		var union []*pearl.Pearl
+		for _, p := range globResults {
+			if !seen[p.ID] {
+				seen[p.ID] = true
+				union = append(union, p)
+			}
+		}
+		for _, p := range scopeResults {
+			if !seen[p.ID] {
+				seen[p.ID] = true
+				union = append(union, p)
+			}
+		}
+		// conv.error-handling (glob) + conv.testing (both) + conv.logging (scope) = 3
+		if len(union) != 3 {
+			t.Errorf("expected 3 unique pearls in union, got %d", len(union))
+		}
+	})
+
+	t.Run("CreateWithInlineContent", func(t *testing.T) {
+		p := &pearl.Pearl{
+			ID: "decisions.auth", Name: "auth", Namespace: "decisions",
+			Type: "brainstorm", Status: pearl.StatusActive,
+			Globs:       []string{"src/auth/**"},
+			Description: "Auth system redesign",
+			CreatedAt:   now, UpdatedAt: now, CreatedBy: "test",
+		}
+		inlineContent := "# Auth Decision\n\nUse JWT with short-lived tokens.\n\n## Rationale\n\nStateless auth scales better."
+
+		if err := store.Create(p, inlineContent); err != nil {
+			t.Fatalf("create: %v", err)
+		}
+
+		gotContent, err := store.GetContent(p)
+		if err != nil {
+			t.Fatalf("get content: %v", err)
+		}
+		if gotContent != inlineContent {
+			t.Errorf("inline content mismatch: got %q", gotContent)
+		}
+
+		// Verify JSONL has all 4 pearls
+		all, err := store.JSONL().ReadAll()
+		if err != nil {
+			t.Fatalf("read jsonl: %v", err)
+		}
+		if len(all) != 4 {
+			t.Errorf("expected 4 pearls in JSONL, got %d", len(all))
+		}
+	})
+}
+
 func TestSyncFromJSONL(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "pearls-test-*")
 	if err != nil {
