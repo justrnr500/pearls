@@ -155,7 +155,6 @@ archives:
       - pl-linux-arm64
       - pl-linux-amd64
     files:
-      - LICENSE
       - README.md
 
 checksum:
