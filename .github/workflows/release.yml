@@ -31,4 +31,4 @@ jobs:
             -w /go/src/github.com/justrnr500/pearls \
             --entrypoint bash \
             ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
-            -c "apt-get update -qq && apt-get install -y -qq libsqlite3-dev >/dev/null 2>&1 && goreleaser release --clean"
+            -c "git config --global --add safe.directory /go/src/github.com/justrnr500/pearls && apt-get update -qq && apt-get install -y -qq libsqlite3-dev >/dev/null 2>&1 && goreleaser release --clean"
