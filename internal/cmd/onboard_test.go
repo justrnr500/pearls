@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -109,5 +110,74 @@ func TestOnboardForceReplaces(t *testing.T) {
 	}
 	if !strings.Contains(content, "After.") {
 		t.Error("content after markers should be preserved")
+	}
+}
+
+func TestSetupClaudeHooks_RegistersSessionStart(t *testing.T) {
+	tmpDir := t.TempDir()
+	settingsPath := filepath.Join(tmpDir, ".claude", "settings.json")
+	os.MkdirAll(filepath.Dir(settingsPath), 0755)
+
+	// Write empty settings
+	os.WriteFile(settingsPath, []byte("{}"), 0644)
+
+	err := registerHook(settingsPath, filepath.Join(tmpDir, "pearls-context.sh"))
+	if err != nil {
+		t.Fatalf("registerHook: %v", err)
+	}
+
+	// Now register the session start hook
+	err = registerSessionStartHook(settingsPath)
+	if err != nil {
+		t.Fatalf("registerSessionStartHook: %v", err)
+	}
+
+	data, _ := os.ReadFile(settingsPath)
+	var settings map[string]interface{}
+	json.Unmarshal(data, &settings)
+
+	hooks, _ := settings["hooks"].(map[string]interface{})
+	if hooks == nil {
+		t.Fatal("expected hooks section in settings")
+	}
+
+	// Check SessionStart exists
+	sessionStart, ok := hooks["SessionStart"]
+	if !ok {
+		t.Fatal("expected SessionStart hook")
+	}
+
+	// Check it contains pearls prime
+	raw, _ := json.Marshal(sessionStart)
+	if !strings.Contains(string(raw), "pearls prime") {
+		t.Error("SessionStart hook should run 'pearls prime'")
+	}
+
+	// Check UserPromptSubmit still exists
+	if _, ok := hooks["UserPromptSubmit"]; !ok {
+		t.Error("UserPromptSubmit hook should still be present")
+	}
+}
+
+func TestRegisterSessionStartHook_NoDuplicates(t *testing.T) {
+	tmpDir := t.TempDir()
+	settingsPath := filepath.Join(tmpDir, ".claude", "settings.json")
+	os.MkdirAll(filepath.Dir(settingsPath), 0755)
+
+	os.WriteFile(settingsPath, []byte("{}"), 0644)
+
+	// Register twice
+	registerSessionStartHook(settingsPath)
+	registerSessionStartHook(settingsPath)
+
+	data, _ := os.ReadFile(settingsPath)
+	var settings map[string]interface{}
+	json.Unmarshal(data, &settings)
+
+	hooks, _ := settings["hooks"].(map[string]interface{})
+	sessionStart, _ := hooks["SessionStart"].([]interface{})
+
+	if len(sessionStart) != 1 {
+		t.Errorf("expected 1 SessionStart hook entry, got %d", len(sessionStart))
 	}
 }
