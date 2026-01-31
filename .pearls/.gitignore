@@ -1,0 +1,4 @@
+# Pearls - SQLite database (local cache, rebuilt from jsonl)
+pearls.db
+pearls.db-shm
+pearls.db-wal

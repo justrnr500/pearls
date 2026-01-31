@@ -1,0 +1,11 @@
+project:
+    name: pearls
+    description: Data asset catalog
+storage:
+    content_dir: content
+defaults:
+    status: active
+    created_by: ${USER}
+vector_search:
+    enabled: true
+    model_path: ~/.pearls/models
