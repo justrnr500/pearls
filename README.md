@@ -2,6 +2,8 @@
 
 Semantic context injection for AI agents.
 
+> **Note:** Pearls is experimental and under active development. APIs and commands may change between releases.
+
 Pearls is a CLI tool for storing, searching, and injecting knowledge into AI agent sessions. It catalogs anything an agent might need -- data schemas, API docs, codebase conventions, architectural decisions, brainstorms, scripts, runbooks -- as searchable markdown. Agents retrieve context via semantic search (pull) or receive it automatically based on file paths and scopes (push).
 
 > Beads gives agents memory about *tasks*. Pearls gives agents memory about *everything else*.
@@ -22,14 +24,10 @@ Pearls is a CLI tool for storing, searching, and injecting knowledge into AI age
 ## Install
 
 ```bash
-go install github.com/justrnr500/pearls/cmd/pearls@latest
+curl -fsSL https://raw.githubusercontent.com/justrnr500/pearls/main/scripts/install.sh | bash
 ```
 
-A shorter alias is also available:
-
-```bash
-go install github.com/justrnr500/pearls/cmd/pl@latest
-```
+This installs pre-built binaries for macOS (Intel & Apple Silicon) and Linux (AMD64 & ARM64). Both `pearls` and the short alias `pl` are included.
 
 ## Quick Start
 
