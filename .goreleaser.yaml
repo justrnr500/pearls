@@ -1,0 +1,207 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: pearls-darwin-arm64
+    main: ./cmd/pearls
+    binary: pearls
+    env:
+      - CGO_ENABLED=1
+      - CC=oa64-clang
+      - CXX=oa64-clang++
+    goos:
+      - darwin
+    goarch:
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/justrnr500/pearls/internal/cmd.Version={{.Version}}
+      - -X github.com/justrnr500/pearls/internal/cmd.Commit={{.ShortCommit}}
+      - -X github.com/justrnr500/pearls/internal/cmd.BuildDate={{.Date}}
+
+  - id: pearls-darwin-amd64
+    main: ./cmd/pearls
+    binary: pearls
+    env:
+      - CGO_ENABLED=1
+      - CC=o64-clang
+      - CXX=o64-clang++
+    goos:
+      - darwin
+    goarch:
+      - amd64
+    ldflags:
+      - -s -w
+      - -X github.com/justrnr500/pearls/internal/cmd.Version={{.Version}}
+      - -X github.com/justrnr500/pearls/internal/cmd.Commit={{.ShortCommit}}
+      - -X github.com/justrnr500/pearls/internal/cmd.BuildDate={{.Date}}
+
+  - id: pearls-linux-arm64
+    main: ./cmd/pearls
+    binary: pearls
+    env:
+      - CGO_ENABLED=1
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
+    goos:
+      - linux
+    goarch:
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/justrnr500/pearls/internal/cmd.Version={{.Version}}
+      - -X github.com/justrnr500/pearls/internal/cmd.Commit={{.ShortCommit}}
+      - -X github.com/justrnr500/pearls/internal/cmd.BuildDate={{.Date}}
+
+  - id: pearls-linux-amd64
+    main: ./cmd/pearls
+    binary: pearls
+    env:
+      - CGO_ENABLED=1
+      - CC=x86_64-linux-gnu-gcc
+      - CXX=x86_64-linux-gnu-g++
+    goos:
+      - linux
+    goarch:
+      - amd64
+    ldflags:
+      - -s -w
+      - -X github.com/justrnr500/pearls/internal/cmd.Version={{.Version}}
+      - -X github.com/justrnr500/pearls/internal/cmd.Commit={{.ShortCommit}}
+      - -X github.com/justrnr500/pearls/internal/cmd.BuildDate={{.Date}}
+
+  - id: pl-darwin-arm64
+    main: ./cmd/pl
+    binary: pl
+    env:
+      - CGO_ENABLED=1
+      - CC=oa64-clang
+      - CXX=oa64-clang++
+    goos:
+      - darwin
+    goarch:
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/justrnr500/pearls/internal/cmd.Version={{.Version}}
+      - -X github.com/justrnr500/pearls/internal/cmd.Commit={{.ShortCommit}}
+      - -X github.com/justrnr500/pearls/internal/cmd.BuildDate={{.Date}}
+
+  - id: pl-darwin-amd64
+    main: ./cmd/pl
+    binary: pl
+    env:
+      - CGO_ENABLED=1
+      - CC=o64-clang
+      - CXX=o64-clang++
+    goos:
+      - darwin
+    goarch:
+      - amd64
+    ldflags:
+      - -s -w
+      - -X github.com/justrnr500/pearls/internal/cmd.Version={{.Version}}
+      - -X github.com/justrnr500/pearls/internal/cmd.Commit={{.ShortCommit}}
+      - -X github.com/justrnr500/pearls/internal/cmd.BuildDate={{.Date}}
+
+  - id: pl-linux-arm64
+    main: ./cmd/pl
+    binary: pl
+    env:
+      - CGO_ENABLED=1
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
+    goos:
+      - linux
+    goarch:
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/justrnr500/pearls/internal/cmd.Version={{.Version}}
+      - -X github.com/justrnr500/pearls/internal/cmd.Commit={{.ShortCommit}}
+      - -X github.com/justrnr500/pearls/internal/cmd.BuildDate={{.Date}}
+
+  - id: pl-linux-amd64
+    main: ./cmd/pl
+    binary: pl
+    env:
+      - CGO_ENABLED=1
+      - CC=x86_64-linux-gnu-gcc
+      - CXX=x86_64-linux-gnu-g++
+    goos:
+      - linux
+    goarch:
+      - amd64
+    ldflags:
+      - -s -w
+      - -X github.com/justrnr500/pearls/internal/cmd.Version={{.Version}}
+      - -X github.com/justrnr500/pearls/internal/cmd.Commit={{.ShortCommit}}
+      - -X github.com/justrnr500/pearls/internal/cmd.BuildDate={{.Date}}
+
+archives:
+  - id: pearls-archive
+    format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    builds:
+      - pearls-darwin-arm64
+      - pearls-darwin-amd64
+      - pearls-linux-arm64
+      - pearls-linux-amd64
+      - pl-darwin-arm64
+      - pl-darwin-amd64
+      - pl-linux-arm64
+      - pl-linux-amd64
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "Merge pull request"
+      - "Merge branch"
+  groups:
+    - title: "Features"
+      regexp: '^.*feat(\(\w+\))?:.*$'
+      order: 0
+    - title: "Bug Fixes"
+      regexp: '^.*fix(\(\w+\))?:.*$'
+      order: 1
+    - title: "Others"
+      order: 999
+
+release:
+  github:
+    owner: justrnr500
+    name: pearls
+  draft: false
+  prerelease: auto
+  name_template: "v{{.Version}}"
+  header: |
+    ## pearls v{{.Version}}
+
+    Pre-compiled binaries for macOS (Intel & Apple Silicon) and Linux (AMD64 & ARM64).
+
+    ### Installation
+
+    **Quick Install (macOS/Linux):**
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/justrnr500/pearls/main/scripts/install.sh | bash
+    ```
+
+    **Manual Install:**
+    Download the appropriate binary for your platform below, extract it, and place it in your PATH.
