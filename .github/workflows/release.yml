@@ -8,6 +8,9 @@ on:
 permissions:
   contents: write
 
+env:
+  GOLANG_CROSS_VERSION: v1.24.5
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -17,16 +20,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          distribution: goreleaser-cross
-          version: latest
-          args: release --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          docker run \
+            --rm \
+            -e CGO_ENABLED=1 \
+            -e GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "${{ github.workspace }}:/go/src/github.com/justrnr500/pearls" \
+            -w /go/src/github.com/justrnr500/pearls \
+            ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
+            release --clean
