@@ -6,19 +6,12 @@ import (
 	"github.com/justrnr500/pearls/internal/pearl"
 )
 
-// Embedder is the interface for generating embeddings.
-type Embedder interface {
-	Embed(text string) ([]float32, error)
-	Close() error
-}
-
 // Store provides a unified interface to pearl storage.
 // It syncs between SQLite (fast queries) and JSONL (git-tracked source of truth).
 type Store struct {
-	db       *DB
-	jsonl    *JSONL
-	content  *Content
-	embedder Embedder // Optional: set to enable vector search
+	db      *DB
+	jsonl   *JSONL
+	content *Content
 }
 
 // NewStore creates a new store with the given paths.
@@ -55,17 +48,6 @@ func (s *Store) JSONL() *JSONL {
 	return s.jsonl
 }
 
-// SetEmbedder sets the embedder for vector search support.
-// If set, embeddings will be generated on Create and Update.
-func (s *Store) SetEmbedder(e Embedder) {
-	s.embedder = e
-}
-
-// HasEmbedder returns true if an embedder is configured.
-func (s *Store) HasEmbedder() bool {
-	return s.embedder != nil
-}
-
 // Create creates a new pearl with content.
 func (s *Store) Create(p *pearl.Pearl, content string) error {
 	// Generate content path if not set
@@ -86,15 +68,6 @@ func (s *Store) Create(p *pearl.Pearl, content string) error {
 		// Rollback content file on failure
 		s.content.Delete(p.ContentPath)
 		return fmt.Errorf("insert pearl: %w", err)
-	}
-
-	// Generate embedding if embedder is configured
-	if s.embedder != nil {
-		embText := s.embeddingText(p.Description, content)
-		if emb, err := s.embedder.Embed(embText); err == nil {
-			// Best effort - don't fail create if embedding fails
-			s.db.InsertEmbedding(p.ID, emb)
-		}
 	}
 
 	// Append to JSONL
@@ -122,28 +95,16 @@ func (s *Store) GetContent(p *pearl.Pearl) (string, error) {
 // Update updates a pearl and optionally its content.
 func (s *Store) Update(p *pearl.Pearl, content *string) error {
 	// Update content if provided
-	contentChanged := false
 	if content != nil && p.ContentPath != "" {
 		if err := s.content.Write(p.ContentPath, *content); err != nil {
 			return fmt.Errorf("write content: %w", err)
 		}
-		newHash := HashString(*content)
-		contentChanged = newHash != p.ContentHash
-		p.ContentHash = newHash
+		p.ContentHash = HashString(*content)
 	}
 
 	// Update in database
 	if err := s.db.Update(p); err != nil {
 		return fmt.Errorf("update pearl: %w", err)
-	}
-
-	// Regenerate embedding if content changed and embedder is configured
-	if s.embedder != nil && contentChanged && content != nil {
-		embText := s.embeddingText(p.Description, *content)
-		if emb, err := s.embedder.Embed(embText); err == nil {
-			// Best effort - don't fail update if embedding fails
-			s.db.UpdateEmbedding(p.ID, emb)
-		}
 	}
 
 	// Rewrite JSONL (full rebuild for updates)
@@ -163,11 +124,6 @@ func (s *Store) Delete(id string) error {
 	}
 	if p == nil {
 		return fmt.Errorf("pearl not found: %s", id)
-	}
-
-	// Delete embedding first (before pearl is deleted)
-	if s.embedder != nil {
-		s.db.DeleteEmbedding(id) // Best effort
 	}
 
 	// Delete from database
@@ -274,29 +230,3 @@ func (s *Store) RefreshContentHashes() error {
 	return s.syncToJSONL()
 }
 
-// SearchSemantic performs a semantic search using vector similarity.
-// Returns an error if no embedder is configured.
-func (s *Store) SearchSemantic(query string, limit int) ([]SemanticResult, error) {
-	if s.embedder == nil {
-		return nil, fmt.Errorf("semantic search requires embedder to be configured")
-	}
-
-	// Generate query embedding
-	queryEmb, err := s.embedder.Embed(query)
-	if err != nil {
-		return nil, fmt.Errorf("embed query: %w", err)
-	}
-
-	return s.db.SearchSemantic(queryEmb, limit)
-}
-
-// embeddingText combines description and content for embedding generation.
-func (s *Store) embeddingText(description, content string) string {
-	if description == "" {
-		return content
-	}
-	if content == "" {
-		return description
-	}
-	return description + "\n\n" + content
-}
