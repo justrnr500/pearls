@@ -24,6 +24,7 @@ Examples:
   pearls list --tag pii
   pearls list --status active
   pearls list --scope backend
+  pearls list --required
   pearls list --json`,
 	Aliases: []string{"ls"},
 	RunE:    runList,
@@ -37,6 +38,7 @@ var (
 	listScope     string
 	listJSON      bool
 	listLimit     int
+	listRequired  bool
 )
 
 func init() {
@@ -48,6 +50,7 @@ func init() {
 	listCmd.Flags().StringVar(&listScope, "scope", "", "Filter by scope")
 	listCmd.Flags().BoolVar(&listJSON, "json", false, "Output as JSON")
 	listCmd.Flags().IntVar(&listLimit, "limit", 0, "Limit number of results")
+	listCmd.Flags().BoolVar(&listRequired, "required", false, "Filter to required pearls only")
 }
 
 func runList(cmd *cobra.Command, args []string) error {
@@ -64,6 +67,10 @@ func runList(cmd *cobra.Command, args []string) error {
 		Tag:       listTag,
 		Scope:     listScope,
 		Limit:     listLimit,
+	}
+	if listRequired {
+		req := true
+		opts.Required = &req
 	}
 
 	pearls, err := store.List(opts)
@@ -94,7 +101,11 @@ func runList(cmd *cobra.Command, args []string) error {
 		if len(desc) > 50 {
 			desc = desc[:47] + "..."
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", p.ID, p.Type, p.Status, desc)
+		marker := " "
+		if p.Required {
+			marker = "*"
+		}
+		fmt.Fprintf(w, "%s%s\t%s\t%s\t%s\n", marker, p.ID, p.Type, p.Status, desc)
 	}
 	w.Flush()
 

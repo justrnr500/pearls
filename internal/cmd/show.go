@@ -96,6 +96,13 @@ func runShow(cmd *cobra.Command, args []string) error {
 		fmt.Printf("  Scopes:      %s\n", strings.Join(p.Scopes, ", "))
 	}
 
+	if p.Required {
+		fmt.Printf("  Required:    yes\n")
+	}
+	if p.Priority != 0 {
+		fmt.Printf("  Priority:    %d\n", p.Priority)
+	}
+
 	if p.ContentPath != "" {
 		fmt.Printf("  Content:     %s\n", p.ContentPath)
 	}
