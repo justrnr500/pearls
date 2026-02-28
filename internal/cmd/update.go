@@ -25,7 +25,9 @@ Examples:
   pearls update db.postgres.users --add-ref db.postgres.organizations
   pearls update db.postgres.users --type view
   pearls update db.postgres.users --globs "src/models/**/*.go,db/migrations/*.sql"
-  pearls update db.postgres.users --scopes backend,data-eng`,
+  pearls update db.postgres.users --scopes backend,data-eng
+  pearls update db.postgres.users --required --priority 10
+  pearls update db.postgres.users --no-required`,
 	Args: cobra.ExactArgs(1),
 	RunE: runUpdate,
 }
@@ -41,6 +43,9 @@ var (
 	updateAddRefs     []string
 	updateRemoveRefs  []string
 	updateJSON        bool
+	updateRequired    bool
+	updateNoRequired  bool
+	updatePriority    int
 )
 
 func init() {
@@ -55,6 +60,9 @@ func init() {
 	updateCmd.Flags().StringSliceVar(&updateAddRefs, "add-ref", nil, "Add reference(s)")
 	updateCmd.Flags().StringSliceVar(&updateRemoveRefs, "remove-ref", nil, "Remove reference(s)")
 	updateCmd.Flags().BoolVar(&updateJSON, "json", false, "Output as JSON")
+	updateCmd.Flags().BoolVar(&updateRequired, "required", false, "Mark pearl as required context")
+	updateCmd.Flags().BoolVar(&updateNoRequired, "no-required", false, "Mark pearl as not required context")
+	updateCmd.Flags().IntVar(&updatePriority, "priority", 0, "Update priority ordering (higher = more important)")
 }
 
 func runUpdate(cmd *cobra.Command, args []string) error {
@@ -172,6 +180,25 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 				refSet[r] = true
 			}
 		}
+		changed = true
+	}
+
+	// Update required
+	if updateRequired && updateNoRequired {
+		return fmt.Errorf("cannot use --required and --no-required together")
+	}
+	if updateRequired {
+		p.Required = true
+		changed = true
+	}
+	if updateNoRequired {
+		p.Required = false
+		changed = true
+	}
+
+	// Update priority
+	if cmd.Flags().Changed("priority") {
+		p.Priority = updatePriority
 		changed = true
 	}
 

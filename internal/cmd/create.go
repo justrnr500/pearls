@@ -26,7 +26,8 @@ The ID should be a dot-separated namespace path like:
 Examples:
   pearls create db.postgres.users --type table
   pearls create api.stripe.customers --type api -d "Stripe customer records"
-  pearls create db.postgres.orders --type table --tag pii --tag core`,
+  pearls create db.postgres.orders --type table --tag pii --tag core
+  pearls create db.postgres.users --type table --required --priority 10`,
 	Args: cobra.ExactArgs(1),
 	RunE: runCreate,
 }
@@ -39,6 +40,8 @@ var (
 	createScopes      string
 	createContent     string
 	createJSON        bool
+	createRequired    bool
+	createPriority    int
 )
 
 func init() {
@@ -50,6 +53,8 @@ func init() {
 	createCmd.Flags().StringVar(&createScopes, "scopes", "", "Comma-separated scope names for scope-based injection")
 	createCmd.Flags().StringVar(&createContent, "content", "", `Inline content (use "-" to read from stdin)`)
 	createCmd.Flags().BoolVar(&createJSON, "json", false, "Output as JSON")
+	createCmd.Flags().BoolVar(&createRequired, "required", false, "Mark pearl as required context")
+	createCmd.Flags().IntVar(&createPriority, "priority", 0, "Priority ordering (higher = more important)")
 }
 
 func runCreate(cmd *cobra.Command, args []string) error {
@@ -118,6 +123,8 @@ func runCreate(cmd *cobra.Command, args []string) error {
 		Globs:       globs,
 		Scopes:      scopes,
 		Description: createDescription,
+		Required:    createRequired,
+		Priority:    createPriority,
 		Status:      pearl.StatusActive,
 		CreatedAt:   now,
 		UpdatedAt:   now,
