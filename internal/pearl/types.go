@@ -125,6 +125,10 @@ type Pearl struct {
 	// Connection (optional, for databases/APIs)
 	Connection *ConnectionInfo `json:"connection,omitempty"`
 
+	// Importance
+	Required bool `json:"required"` // Whether this pearl is required context
+	Priority int  `json:"priority"` // Priority ordering (higher = more important)
+
 	// Metadata
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

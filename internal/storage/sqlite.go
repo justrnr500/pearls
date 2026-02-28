@@ -34,6 +34,8 @@ CREATE TABLE IF NOT EXISTS pearls (
 	refs TEXT NOT NULL DEFAULT '[]',
 	parent TEXT NOT NULL DEFAULT '',
 	connection TEXT,
+	required INTEGER NOT NULL DEFAULT 0,
+	priority INTEGER NOT NULL DEFAULT 0,
 	created_at TEXT NOT NULL,
 	updated_at TEXT NOT NULL,
 	created_by TEXT NOT NULL DEFAULT '',
@@ -132,11 +134,12 @@ func (d *DB) Insert(p *pearl.Pearl) error {
 	}
 
 	_, err = d.db.Exec(`
-		INSERT INTO pearls (id, name, namespace, type, tags, globs, scopes, description, content_path, content_hash, refs, parent, connection, created_at, updated_at, created_by, status)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO pearls (id, name, namespace, type, tags, globs, scopes, description, content_path, content_hash, refs, parent, connection, required, priority, created_at, updated_at, created_by, status)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`,
 		p.ID, p.Name, p.Namespace, p.Type, tags, globs, scopes, p.Description,
 		p.ContentPath, p.ContentHash, refs, p.Parent, connJSON,
+		p.Required, p.Priority,
 		p.CreatedAt.Format(time.RFC3339), p.UpdatedAt.Format(time.RFC3339),
 		p.CreatedBy, p.Status,
 	)
@@ -181,11 +184,12 @@ func (d *DB) Update(p *pearl.Pearl) error {
 		UPDATE pearls SET
 			name = ?, namespace = ?, type = ?, tags = ?, globs = ?, scopes = ?, description = ?,
 			content_path = ?, content_hash = ?, refs = ?, parent = ?,
-			connection = ?, updated_at = ?, created_by = ?, status = ?
+			connection = ?, required = ?, priority = ?, updated_at = ?, created_by = ?, status = ?
 		WHERE id = ?
 	`,
 		p.Name, p.Namespace, p.Type, tags, globs, scopes, p.Description,
 		p.ContentPath, p.ContentHash, refs, p.Parent, connJSON,
+		p.Required, p.Priority,
 		p.UpdatedAt.Format(time.RFC3339), p.CreatedBy, p.Status,
 		p.ID,
 	)
@@ -225,7 +229,7 @@ func (d *DB) Delete(id string) error {
 // Get retrieves a pearl by ID.
 func (d *DB) Get(id string) (*pearl.Pearl, error) {
 	row := d.db.QueryRow(`
-		SELECT id, name, namespace, type, tags, globs, scopes, description, content_path, content_hash, refs, parent, connection, created_at, updated_at, created_by, status
+		SELECT id, name, namespace, type, tags, globs, scopes, description, content_path, content_hash, refs, parent, connection, required, priority, created_at, updated_at, created_by, status
 		FROM pearls WHERE id = ?
 	`, id)
 
@@ -234,7 +238,7 @@ func (d *DB) Get(id string) (*pearl.Pearl, error) {
 
 // List retrieves all pearls matching the given filters.
 func (d *DB) List(opts ListOptions) ([]*pearl.Pearl, error) {
-	query := "SELECT id, name, namespace, type, tags, globs, scopes, description, content_path, content_hash, refs, parent, connection, created_at, updated_at, created_by, status FROM pearls WHERE 1=1"
+	query := "SELECT id, name, namespace, type, tags, globs, scopes, description, content_path, content_hash, refs, parent, connection, required, priority, created_at, updated_at, created_by, status FROM pearls WHERE 1=1"
 	args := []interface{}{}
 
 	if opts.Namespace != "" {
@@ -257,8 +261,15 @@ func (d *DB) List(opts ListOptions) ([]*pearl.Pearl, error) {
 		query += " AND scopes LIKE ?"
 		args = append(args, fmt.Sprintf(`%%"%s"%%`, opts.Scope))
 	}
+	if opts.Required != nil {
+		if *opts.Required {
+			query += " AND required = 1"
+		} else {
+			query += " AND required = 0"
+		}
+	}
 
-	query += " ORDER BY namespace, name"
+	query += " ORDER BY priority DESC, namespace, name"
 
 	if opts.Limit > 0 {
 		query += fmt.Sprintf(" LIMIT %d", opts.Limit)
@@ -289,6 +300,7 @@ type ListOptions struct {
 	Status    string
 	Tag       string
 	Scope     string
+	Required  *bool // Filter by required field (nil = no filter)
 	Limit     int
 }
 
@@ -301,7 +313,7 @@ func (d *DB) Search(query string, limit int) ([]*pearl.Pearl, error) {
 	// Simple LIKE-based search across searchable fields
 	pattern := "%" + query + "%"
 	rows, err := d.db.Query(`
-		SELECT id, name, namespace, type, tags, globs, scopes, description, content_path, content_hash, refs, parent, connection, created_at, updated_at, created_by, status
+		SELECT id, name, namespace, type, tags, globs, scopes, description, content_path, content_hash, refs, parent, connection, required, priority, created_at, updated_at, created_by, status
 		FROM pearls
 		WHERE id LIKE ? OR name LIKE ? OR namespace LIKE ? OR description LIKE ? OR tags LIKE ?
 		ORDER BY namespace, name
@@ -366,7 +378,7 @@ func (d *DB) FindReferencingPearls(targetID string) ([]string, error) {
 func (d *DB) FindByScope(scope string) ([]*pearl.Pearl, error) {
 	pattern := fmt.Sprintf(`%%"%s"%%`, scope)
 	rows, err := d.db.Query(`
-		SELECT id, name, namespace, type, tags, globs, scopes, description, content_path, content_hash, refs, parent, connection, created_at, updated_at, created_by, status
+		SELECT id, name, namespace, type, tags, globs, scopes, description, content_path, content_hash, refs, parent, connection, required, priority, created_at, updated_at, created_by, status
 		FROM pearls
 		WHERE scopes LIKE ?
 		ORDER BY namespace, name
@@ -393,7 +405,7 @@ func (d *DB) FindByScope(scope string) ([]*pearl.Pearl, error) {
 // pearls with non-empty globs and filters in Go.
 func (d *DB) FindByGlob(path string) ([]*pearl.Pearl, error) {
 	rows, err := d.db.Query(`
-		SELECT id, name, namespace, type, tags, globs, scopes, description, content_path, content_hash, refs, parent, connection, created_at, updated_at, created_by, status
+		SELECT id, name, namespace, type, tags, globs, scopes, description, content_path, content_hash, refs, parent, connection, required, priority, created_at, updated_at, created_by, status
 		FROM pearls
 		WHERE globs != '[]' AND globs != '' AND globs != 'null'
 		ORDER BY namespace, name
@@ -438,6 +450,7 @@ func scanPearl(row *sql.Row) (*pearl.Pearl, error) {
 	err := row.Scan(
 		&p.ID, &p.Name, &p.Namespace, &p.Type, &tags, &globs, &scopes, &p.Description,
 		&p.ContentPath, &p.ContentHash, &refs, &p.Parent, &connJSON,
+		&p.Required, &p.Priority,
 		&createdAt, &updatedAt, &p.CreatedBy, &p.Status,
 	)
 	if err == sql.ErrNoRows {
@@ -480,6 +493,7 @@ func scanPearlRows(rows *sql.Rows) (*pearl.Pearl, error) {
 	err := rows.Scan(
 		&p.ID, &p.Name, &p.Namespace, &p.Type, &tags, &globs, &scopes, &p.Description,
 		&p.ContentPath, &p.ContentHash, &refs, &p.Parent, &connJSON,
+		&p.Required, &p.Priority,
 		&createdAt, &updatedAt, &p.CreatedBy, &p.Status,
 	)
 	if err != nil {

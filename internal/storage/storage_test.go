@@ -1228,3 +1228,173 @@ func TestVectorOperations(t *testing.T) {
 		}
 	})
 }
+
+func TestRequiredAndPriority(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "pearls-reqpri-test-*")
+	if err != nil {
+		t.Fatalf("create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	dbPath := filepath.Join(tmpDir, "pearls.db")
+	db, err := OpenDB(dbPath)
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+	defer db.Close()
+
+	now := time.Now().Truncate(time.Second)
+
+	// Insert pearls with different required/priority values
+	pearls := []*pearl.Pearl{
+		{
+			ID: "test.low", Name: "low", Namespace: "test",
+			Type: pearl.TypeTable, Status: pearl.StatusActive,
+			Required: false, Priority: 1,
+			CreatedAt: now, UpdatedAt: now,
+		},
+		{
+			ID: "test.high", Name: "high", Namespace: "test",
+			Type: pearl.TypeTable, Status: pearl.StatusActive,
+			Required: true, Priority: 10,
+			CreatedAt: now, UpdatedAt: now,
+		},
+		{
+			ID: "test.medium", Name: "medium", Namespace: "test",
+			Type: pearl.TypeTable, Status: pearl.StatusActive,
+			Required: true, Priority: 5,
+			CreatedAt: now, UpdatedAt: now,
+		},
+		{
+			ID: "test.zero", Name: "zero", Namespace: "test",
+			Type: pearl.TypeTable, Status: pearl.StatusActive,
+			Required: false, Priority: 0,
+			CreatedAt: now, UpdatedAt: now,
+		},
+	}
+
+	for _, p := range pearls {
+		if err := db.Insert(p); err != nil {
+			t.Fatalf("insert %s: %v", p.ID, err)
+		}
+	}
+
+	// Test roundtrip: Get preserves required and priority
+	t.Run("Roundtrip", func(t *testing.T) {
+		got, err := db.Get("test.high")
+		if err != nil {
+			t.Fatalf("get: %v", err)
+		}
+		if got == nil {
+			t.Fatal("pearl not found")
+		}
+		if !got.Required {
+			t.Error("expected Required to be true")
+		}
+		if got.Priority != 10 {
+			t.Errorf("Priority = %d, want 10", got.Priority)
+		}
+
+		got, err = db.Get("test.low")
+		if err != nil {
+			t.Fatalf("get: %v", err)
+		}
+		if got.Required {
+			t.Error("expected Required to be false")
+		}
+		if got.Priority != 1 {
+			t.Errorf("Priority = %d, want 1", got.Priority)
+		}
+	})
+
+	// Test List with Required filter
+	t.Run("ListRequiredFilter", func(t *testing.T) {
+		reqTrue := true
+		results, err := db.List(ListOptions{Required: &reqTrue})
+		if err != nil {
+			t.Fatalf("list required=true: %v", err)
+		}
+		if len(results) != 2 {
+			t.Errorf("expected 2 required pearls, got %d", len(results))
+		}
+		for _, p := range results {
+			if !p.Required {
+				t.Errorf("pearl %s should be required", p.ID)
+			}
+		}
+
+		reqFalse := false
+		results, err = db.List(ListOptions{Required: &reqFalse})
+		if err != nil {
+			t.Fatalf("list required=false: %v", err)
+		}
+		if len(results) != 2 {
+			t.Errorf("expected 2 non-required pearls, got %d", len(results))
+		}
+		for _, p := range results {
+			if p.Required {
+				t.Errorf("pearl %s should not be required", p.ID)
+			}
+		}
+	})
+
+	// Test List orders by priority DESC
+	t.Run("PriorityOrdering", func(t *testing.T) {
+		results, err := db.List(ListOptions{})
+		if err != nil {
+			t.Fatalf("list: %v", err)
+		}
+		if len(results) != 4 {
+			t.Fatalf("expected 4 pearls, got %d", len(results))
+		}
+
+		// Should be ordered by priority DESC, then namespace, name
+		// priority 10 (high), priority 5 (medium), priority 1 (low), priority 0 (zero)
+		expectedOrder := []string{"test.high", "test.medium", "test.low", "test.zero"}
+		for i, p := range results {
+			if p.ID != expectedOrder[i] {
+				t.Errorf("position %d: got %s, want %s", i, p.ID, expectedOrder[i])
+			}
+		}
+	})
+
+	// Test Update preserves required and priority
+	t.Run("UpdatePreservesFields", func(t *testing.T) {
+		p, _ := db.Get("test.low")
+		p.Required = true
+		p.Priority = 100
+		p.UpdatedAt = time.Now().Truncate(time.Second)
+
+		if err := db.Update(p); err != nil {
+			t.Fatalf("update: %v", err)
+		}
+
+		got, _ := db.Get("test.low")
+		if !got.Required {
+			t.Error("expected Required to be true after update")
+		}
+		if got.Priority != 100 {
+			t.Errorf("Priority = %d, want 100 after update", got.Priority)
+		}
+	})
+
+	// Test default values (zero values)
+	t.Run("DefaultValues", func(t *testing.T) {
+		p := &pearl.Pearl{
+			ID: "test.defaults", Name: "defaults", Namespace: "test",
+			Type: pearl.TypeTable, Status: pearl.StatusActive,
+			CreatedAt: now, UpdatedAt: now,
+		}
+		if err := db.Insert(p); err != nil {
+			t.Fatalf("insert: %v", err)
+		}
+
+		got, _ := db.Get("test.defaults")
+		if got.Required {
+			t.Error("expected Required to default to false")
+		}
+		if got.Priority != 0 {
+			t.Errorf("expected Priority to default to 0, got %d", got.Priority)
+		}
+	})
+}
