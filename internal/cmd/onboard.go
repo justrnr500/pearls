@@ -7,8 +7,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
+
+	"github.com/justrnr500/pearls/internal/pearl"
 )
 
 //go:embed templates/onboard.md
@@ -16,6 +19,12 @@ var onboardTemplateContent string
 
 //go:embed templates/hook-context.sh
 var hookScriptContent string
+
+//go:embed templates/seed-triggers.md
+var seedTriggersContent string
+
+//go:embed templates/seed-reference.md
+var seedReferenceContent string
 
 var onboardCmd = &cobra.Command{
 	Use:   "onboard",
@@ -39,6 +48,7 @@ var (
 	onboardTarget string
 	onboardForce  bool
 	onboardHooks  bool
+	onboardSeeds  bool
 )
 
 func init() {
@@ -46,6 +56,7 @@ func init() {
 	onboardCmd.Flags().StringVar(&onboardTarget, "target", "claude", "Which file to update: claude, agents, or all")
 	onboardCmd.Flags().BoolVar(&onboardForce, "force", false, "Overwrite existing pearls section")
 	onboardCmd.Flags().BoolVar(&onboardHooks, "hooks", false, "Set up Claude Code hooks for automatic context injection")
+	onboardCmd.Flags().BoolVar(&onboardSeeds, "seeds", false, "Create seed pearls (sys.triggers and sys.reference)")
 }
 
 func runOnboard(cmd *cobra.Command, args []string) error {
@@ -82,6 +93,12 @@ func runOnboard(cmd *cobra.Command, args []string) error {
 	if onboardHooks {
 		if err := setupClaudeHooks(cwd); err != nil {
 			return fmt.Errorf("setup hooks: %w", err)
+		}
+	}
+
+	if onboardSeeds {
+		if err := createSeedPearls(); err != nil {
+			return fmt.Errorf("create seed pearls: %w", err)
 		}
 	}
 
@@ -155,11 +172,11 @@ func setupClaudeHooks(projectRoot string) error {
 	}
 	fmt.Printf("✓ Registered UserPromptSubmit hook in %s\n", settingsPath)
 
-	// 3. Register the SessionStart hook for pearls prime
+	// 3. Register the SessionStart hook for pearls clutch (upgrading from pearls prime if present)
 	if err := registerSessionStartHook(settingsPath); err != nil {
 		return fmt.Errorf("register session start hook: %w", err)
 	}
-	fmt.Printf("✓ Registered SessionStart hook (pearls prime) in %s\n", settingsPath)
+	fmt.Printf("✓ Registered SessionStart hook (pearls clutch) in %s\n", settingsPath)
 
 	return nil
 }
@@ -232,8 +249,9 @@ func registerHook(settingsPath, scriptPath string) error {
 	return os.WriteFile(settingsPath, append(data, '\n'), 0644)
 }
 
-// registerSessionStartHook adds a SessionStart hook that runs "pearls prime"
-// to .claude/settings.json, avoiding duplicates.
+// registerSessionStartHook adds a SessionStart hook that runs "pearls clutch"
+// to .claude/settings.json. If an old "pearls prime" hook is found, it is
+// upgraded to "pearls clutch". Avoids duplicates.
 func registerSessionStartHook(settingsPath string) error {
 	// Read existing settings or start fresh
 	settings := make(map[string]interface{})
@@ -246,7 +264,7 @@ func registerSessionStartHook(settingsPath string) error {
 	// Build the hook entry
 	hookEntry := map[string]interface{}{
 		"type":    "command",
-		"command": "pearls prime",
+		"command": "pearls clutch",
 		"timeout": 10,
 	}
 
@@ -263,8 +281,8 @@ func registerSessionStartHook(settingsPath string) error {
 	// Get existing SessionStart array
 	existing, _ := hooks["SessionStart"].([]interface{})
 
-	// Check if pearls prime hook is already registered
-	alreadyRegistered := false
+	// Check for existing pearls hooks (both old "pearls prime" and new "pearls clutch")
+	clutchRegistered := false
 	for _, entry := range existing {
 		group, ok := entry.(map[string]interface{})
 		if !ok {
@@ -277,14 +295,17 @@ func registerSessionStartHook(settingsPath string) error {
 				continue
 			}
 			cmd, _ := hook["command"].(string)
-			if strings.Contains(cmd, "pearls prime") {
-				alreadyRegistered = true
-				break
+			if strings.Contains(cmd, "pearls clutch") {
+				clutchRegistered = true
+			} else if strings.Contains(cmd, "pearls prime") {
+				// Upgrade: replace old "pearls prime" with "pearls clutch"
+				hook["command"] = "pearls clutch"
+				clutchRegistered = true
 			}
 		}
 	}
 
-	if !alreadyRegistered {
+	if !clutchRegistered {
 		existing = append(existing, hookGroup)
 	}
 
@@ -302,4 +323,80 @@ func registerSessionStartHook(settingsPath string) error {
 
 func hookScript() string {
 	return hookScriptContent
+}
+
+// seedPearl defines a pearl to create during onboard --seeds.
+type seedPearl struct {
+	ID          string
+	Name        string
+	Namespace   string
+	Type        pearl.AssetType
+	Description string
+	Content     string
+}
+
+// seedPearls returns the list of seed pearls to create.
+func seedPearls() []seedPearl {
+	return []seedPearl{
+		{
+			ID:          "sys.triggers",
+			Name:        "triggers",
+			Namespace:   "sys",
+			Type:        "reference",
+			Description: "How pearls context injection triggers work (globs, clutch, scopes)",
+			Content:     seedTriggersContent,
+		},
+		{
+			ID:          "sys.reference",
+			Name:        "reference",
+			Namespace:   "sys",
+			Type:        "reference",
+			Description: "Quick reference for pearls commands, types, and flags",
+			Content:     seedReferenceContent,
+		},
+	}
+}
+
+// createSeedPearls creates the built-in seed pearls if they don't already exist.
+func createSeedPearls() error {
+	store, _, err := getStore()
+	if err != nil {
+		return err
+	}
+	defer store.Close()
+
+	now := time.Now()
+
+	for _, seed := range seedPearls() {
+		// Skip if already exists
+		existing, err := store.Get(seed.ID)
+		if err != nil {
+			return fmt.Errorf("check existing %s: %w", seed.ID, err)
+		}
+		if existing != nil {
+			fmt.Printf("  Seed pearl %s already exists, skipping\n", seed.ID)
+			continue
+		}
+
+		p := &pearl.Pearl{
+			ID:          seed.ID,
+			Name:        seed.Name,
+			Namespace:   seed.Namespace,
+			Type:        seed.Type,
+			Description: seed.Description,
+			Required:    true,
+			Priority:    -10,
+			Status:      pearl.StatusActive,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+			CreatedBy:   "pearls-onboard",
+		}
+
+		if err := store.Create(p, seed.Content); err != nil {
+			return fmt.Errorf("create seed %s: %w", seed.ID, err)
+		}
+		fmt.Printf("✓ Created seed pearl: %s\n", seed.ID)
+	}
+
+	return nil
 }

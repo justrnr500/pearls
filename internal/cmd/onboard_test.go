@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/justrnr500/pearls/internal/storage"
 )
 
 func TestOnboardTemplate(t *testing.T) {
@@ -147,10 +149,13 @@ func TestSetupClaudeHooks_RegistersSessionStart(t *testing.T) {
 		t.Fatal("expected SessionStart hook")
 	}
 
-	// Check it contains pearls prime
+	// Check it contains pearls clutch (not pearls prime)
 	raw, _ := json.Marshal(sessionStart)
-	if !strings.Contains(string(raw), "pearls prime") {
-		t.Error("SessionStart hook should run 'pearls prime'")
+	if !strings.Contains(string(raw), "pearls clutch") {
+		t.Error("SessionStart hook should run 'pearls clutch'")
+	}
+	if strings.Contains(string(raw), "pearls prime") {
+		t.Error("SessionStart hook should not contain 'pearls prime'")
 	}
 
 	// Check UserPromptSubmit still exists
@@ -179,5 +184,91 @@ func TestRegisterSessionStartHook_NoDuplicates(t *testing.T) {
 
 	if len(sessionStart) != 1 {
 		t.Errorf("expected 1 SessionStart hook entry, got %d", len(sessionStart))
+	}
+}
+
+func TestRegisterSessionStartHook_UpgradeFromPrime(t *testing.T) {
+	tmpDir := t.TempDir()
+	settingsPath := filepath.Join(tmpDir, ".claude", "settings.json")
+	os.MkdirAll(filepath.Dir(settingsPath), 0755)
+
+	// Write settings with old "pearls prime" hook
+	oldSettings := `{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pearls prime",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}`
+	os.WriteFile(settingsPath, []byte(oldSettings), 0644)
+
+	err := registerSessionStartHook(settingsPath)
+	if err != nil {
+		t.Fatalf("registerSessionStartHook: %v", err)
+	}
+
+	data, _ := os.ReadFile(settingsPath)
+	var settings map[string]interface{}
+	json.Unmarshal(data, &settings)
+
+	hooks, _ := settings["hooks"].(map[string]interface{})
+	sessionStart, _ := hooks["SessionStart"].([]interface{})
+
+	// Should still be 1 entry (upgraded in place, not added new)
+	if len(sessionStart) != 1 {
+		t.Errorf("expected 1 SessionStart hook entry after upgrade, got %d", len(sessionStart))
+	}
+
+	// Check it now contains pearls clutch
+	raw, _ := json.Marshal(sessionStart)
+	if !strings.Contains(string(raw), "pearls clutch") {
+		t.Error("upgraded hook should run 'pearls clutch'")
+	}
+	if strings.Contains(string(raw), "pearls prime") {
+		t.Error("upgraded hook should not contain 'pearls prime'")
+	}
+}
+
+func TestCreateSeedPearls(t *testing.T) {
+	tmpDir := t.TempDir()
+	store, err := storage.NewStore(
+		filepath.Join(tmpDir, "pearls.db"),
+		filepath.Join(tmpDir, "pearls.jsonl"),
+		filepath.Join(tmpDir, "content"),
+	)
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer store.Close()
+
+	seeds := seedPearls()
+	if len(seeds) != 2 {
+		t.Fatalf("expected 2 seed pearls, got %d", len(seeds))
+	}
+
+	// Verify seed definitions
+	triggersSeed := seeds[0]
+	if triggersSeed.ID != "sys.triggers" {
+		t.Errorf("expected sys.triggers, got %s", triggersSeed.ID)
+	}
+	refSeed := seeds[1]
+	if refSeed.ID != "sys.reference" {
+		t.Errorf("expected sys.reference, got %s", refSeed.ID)
+	}
+
+	// Verify embedded content is non-empty
+	if len(seedTriggersContent) == 0 {
+		t.Error("seed triggers content should not be empty")
+	}
+	if len(seedReferenceContent) == 0 {
+		t.Error("seed reference content should not be empty")
 	}
 }
