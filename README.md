@@ -6,8 +6,6 @@ Context injection for AI agents.
 
 Pearls is a CLI tool for storing, searching, and injecting knowledge into AI agent sessions. It catalogs anything an agent might need -- data schemas, API docs, codebase conventions, architectural decisions, brainstorms, scripts, runbooks -- as searchable markdown. Agents receive context automatically based on file paths and scopes (push) or find it via keyword search (pull).
 
-> Beads gives agents memory about *tasks*. Pearls gives agents memory about *everything else*.
-
 ## Features
 
 - **Markdown-native** -- Pearl content is plain markdown. Human-readable, version-controllable, LLM-friendly.
@@ -74,6 +72,17 @@ pearls doctor
 git add .pearls/
 git commit -m "Add knowledge catalog"
 ```
+## Why this exists
+
+I was inspired by Beads, wanted to try out Gas Town, and tired of managing and having to plan out the various AGENTS.md nested markdown nightmare.  I wanted to make it so my agents themsevles could manage and maintain their knowledge, and inject it, regardless of platform/harness.  This makes it portable for collaborators, etc.
+
+Another issue I've faced is the context bloat.  This allows hooks to inject context as needed into the window, and optional required and priority fields so there is control over how that is presented.  Pearls can be large instructions (use with caution) or small composable objects.
+
+I tried forcing my agents to comment thoroughly, but I haven't had good luck with it.  I tried deep nested claude actions, but the append-style of them lead to all sorts of interesting weirdness.  So now I'm here.
+
+There was once a semantic search for this, but I never saw my own agents using it, so I took it out as it was heavyweight.
+
+I hope its useful!
 
 ## Commands
 
