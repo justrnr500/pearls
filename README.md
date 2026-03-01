@@ -1,10 +1,10 @@
 # Pearls
 
-Semantic context injection for AI agents.
+Context injection for AI agents.
 
 > **Note:** Pearls is experimental and under active development. APIs and commands may change between releases.
 
-Pearls is a CLI tool for storing, searching, and injecting knowledge into AI agent sessions. It catalogs anything an agent might need -- data schemas, API docs, codebase conventions, architectural decisions, brainstorms, scripts, runbooks -- as searchable markdown. Agents retrieve context via semantic search (pull) or receive it automatically based on file paths and scopes (push).
+Pearls is a CLI tool for storing, searching, and injecting knowledge into AI agent sessions. It catalogs anything an agent might need -- data schemas, API docs, codebase conventions, architectural decisions, brainstorms, scripts, runbooks -- as searchable markdown. Agents receive context automatically based on file paths and scopes (push) or find it via keyword search (pull).
 
 > Beads gives agents memory about *tasks*. Pearls gives agents memory about *everything else*.
 
@@ -12,9 +12,9 @@ Pearls is a CLI tool for storing, searching, and injecting knowledge into AI age
 
 - **Markdown-native** -- Pearl content is plain markdown. Human-readable, version-controllable, LLM-friendly.
 - **Git as database** -- JSONL metadata + markdown content travel with your code. No server required.
-- **Agent-first** -- Every command supports `--json` output. Search is fast and semantic.
+- **Agent-first** -- Every command supports `--json` output. Search is fast.
 - **Push-based context** -- Attach glob patterns and scopes to pearls. Agents get relevant context injected based on what files they're touching or what domain they're working in. Replaces scattered `agent.md` files.
-- **Semantic search** -- Natural language queries powered by local embeddings (all-MiniLM-L6-v2)
+- **Required pearls** -- Mark pearls as required with priority ordering. The `clutch` command outputs all required context for session startup hooks.
 - **Free-form types** -- Not just data assets. Store conventions, brainstorms, API docs, runbooks, decisions -- any knowledge worth preserving.
 - **Hierarchical** -- Dot-separated namespaces: `db.postgres.users`, `api.stripe.customers`
 - **Relationship tracking** -- Pearls reference other pearls, creating a navigable graph
@@ -43,10 +43,11 @@ pearls create conventions.error-handling --type convention \
   -d "How we handle errors in this codebase" \
   --globs "src/**/*.ts" --scopes "conventions"
 
-# Create an API pearl scoped to payment code
+# Create a required pearl with priority
 pearls create api.stripe.customers --type api \
   -d "Stripe customer API integration" \
-  --globs "src/payments/**,src/billing/**" --scopes "payments,stripe"
+  --globs "src/payments/**,src/billing/**" --scopes "payments,stripe" \
+  --required --priority 10
 
 # Edit the generated markdown
 $EDITOR .pearls/content/conventions/error-handling.md
@@ -54,14 +55,17 @@ $EDITOR .pearls/content/conventions/error-handling.md
 # Or auto-generate from a live database
 pearls introspect postgres --prefix db.postgres
 
-# Pull: semantic search
-pearls search "where is payment info stored" --semantic
+# Search by keyword
+pearls search "payment info"
 
 # Push: get context for a file path (matches globs)
 pearls context --for src/payments/checkout.ts
 
 # Push: get context for a scope
 pearls context --scope payments
+
+# Get all required pearls (for session hooks)
+pearls clutch
 
 # Check catalog health
 pearls doctor
@@ -97,6 +101,10 @@ pearls create conventions.error-handling --type convention \
 pearls create decisions.auth-redesign --type brainstorm \
   --scopes "auth,architecture" -d "Auth system redesign discussion"
 
+# Mark as required with priority
+pearls create sys.conventions --type system --required --priority 5 \
+  -d "Core coding conventions"
+
 # Inline content (no template, no editor)
 pearls create conventions.logging --type convention \
   --content "# Logging\n\nUse structured logging with context fields."
@@ -111,6 +119,8 @@ cat design-notes.md | pearls create decisions.auth --type brainstorm --content -
 - `--tag` -- Tags (repeatable)
 - `--globs` -- Comma-separated file glob patterns for push-based context injection (e.g., `"src/payments/**,src/billing/**"`)
 - `--scopes` -- Comma-separated scope names for scope-based injection (e.g., `"payments,stripe"`)
+- `--required` -- Mark pearl as required context (included in `clutch` output)
+- `--priority` -- Priority ordering for required pearls (higher = more important, default: 0)
 - `--content` -- Inline content string. Supports `\n` for newlines. Use `--content -` to read from stdin. Skips template generation.
 - `--json` -- JSON output
 
@@ -151,28 +161,20 @@ pearls cat db.postgres.users
 
 ### `pearls search`
 
-Search by keyword or semantic similarity.
+Search by keyword.
 
 ```bash
-# Keyword search (default)
 pearls search customer
 pearls search "user email" --type table
 pearls search orders --tag analytics --json
-
-# Semantic search (natural language)
-pearls search "where is payment data stored" --semantic
-pearls search "tables with PII" --semantic
 ```
 
 **Flags:**
-- `--semantic` -- Use vector similarity instead of keyword matching
 - `--type, -t` -- Filter by type
 - `--status, -s` -- Filter by status
 - `--tag` -- Filter by tag
 - `--limit` -- Maximum results (default: 50)
 - `--json` -- JSON output
-
-Semantic search uses all-MiniLM-L6-v2 embeddings (downloaded automatically on first use, ~90MB, cached at `~/.pearls/models/`).
 
 ### `pearls update`
 
@@ -187,6 +189,9 @@ pearls update db.postgres.users --add-ref db.postgres.organizations
 pearls update db.postgres.users --type convention
 pearls update db.postgres.users --globs "src/models/user/**"
 pearls update db.postgres.users --scopes "users,auth"
+pearls update db.postgres.users --required
+pearls update db.postgres.users --no-required
+pearls update db.postgres.users --priority 10
 ```
 
 ### `pearls delete`
@@ -252,6 +257,16 @@ pearls context --for src/payments/checkout.ts --scope auth
 - `--with-refs` -- Include referenced pearls
 - `--brief` -- Metadata only, no markdown content
 
+### `pearls clutch`
+
+Output concatenated content of all required pearls, sorted by priority. Designed for use in session startup hooks.
+
+```bash
+pearls clutch              # All required pearls as concatenated markdown
+pearls clutch --brief      # Metadata only
+pearls clutch --json       # JSON output
+```
+
 ### `pearls sync`
 
 Synchronize SQLite cache with JSONL source of truth.
@@ -261,20 +276,6 @@ pearls sync
 ```
 
 Run after pulling from git to rebuild the local database from the JSONL file.
-
-### `pearls index`
-
-Manage the vector search index.
-
-```bash
-# Show index status
-pearls index
-
-# Rebuild all embeddings
-pearls index --rebuild
-```
-
-Use `--rebuild` after initial setup, model upgrades, or to index existing pearls that don't have embeddings yet.
 
 ### `pearls introspect`
 
@@ -327,9 +328,12 @@ pearls onboard --target agents    # Update agents.md
 pearls onboard --target all       # Update both
 pearls onboard --force            # Overwrite existing pearls section
 pearls onboard --hooks            # Set up Claude Code context injection hook
+pearls onboard --seeds            # Create seed required pearls (sys.triggers, sys.reference)
 ```
 
 The `--hooks` flag creates `.claude/hooks/context-inject.sh`, a shell script that automatically injects relevant pearl context based on your current git changes. Register it as a Claude Code hook for push-based context delivery.
+
+The `--seeds` flag creates two required system pearls (`sys.triggers` and `sys.reference`) with content from built-in templates. These provide default workflow triggers and command reference for agents. You can edit, reprioritize, or remove them like any other pearl.
 
 ## Directory Structure
 
@@ -366,30 +370,15 @@ storage:
 defaults:
   status: active
   created_by: ${USER}
-vector_search:
-  enabled: true
-  model_path: ~/.pearls/models    # Shared across projects
 aliases: {}
-```
-
-### Vector Search
-
-Vector search is enabled by default. The embedding model (`all-MiniLM-L6-v2`) downloads automatically on first use to `~/.pearls/models/` (shared across all projects, ~90MB).
-
-To disable:
-
-```yaml
-vector_search:
-  enabled: false
 ```
 
 ## Agent Integration
 
-### Three Retrieval Layers
+### Two Retrieval Layers
 
 | Layer | Mechanism | Use case |
 |-------|-----------|----------|
-| Pull  | Semantic search | Agent asks "what do I need to know about X?" |
 | Push  | Glob matching | Agent working in a file path gets relevant context |
 | Push  | Scope matching | Agent declares what domain it's working in |
 
@@ -403,11 +392,16 @@ pearls context --for src/payments/checkout.ts
 
 This returns every pearl whose globs match that path -- API docs, conventions, schema info -- without needing a file in that directory.
 
-### Pull: Semantic Search
+### Required Pearls and Clutch
+
+Mark pearls as required and assign priorities to build a curated startup context:
 
 ```bash
-pearls search "how do we handle payment errors" --semantic --json
+pearls create sys.conventions --type system --required --priority 10 -d "Core conventions"
+pearls clutch   # Outputs all required pearls, sorted by priority
 ```
+
+Wire `pearls clutch` into a Claude Code SessionStart hook via `pearls onboard --hooks` for automatic context injection at session start.
 
 ### JSON Output
 
@@ -424,7 +418,7 @@ Pearls complements [beads](https://github.com/steveyegge/beads) for agent work:
 ```bash
 bd ready                                             # Get next task
 pearls context --for src/payments/checkout.ts        # Get relevant context
-pearls search "customer churn" --semantic             # Find more knowledge
+pearls search "customer churn"                       # Find more knowledge
 # ... do work ...
 bd close bd-a3f8                                      # Complete task
 ```
@@ -477,10 +471,9 @@ cmd/
 internal/
 ├── cmd/              # CLI commands (Cobra)
 ├── config/           # Configuration management
-├── embedding/        # Vector embeddings (hugot + all-MiniLM-L6-v2)
 ├── introspect/       # Database introspection (Postgres, MySQL, SQLite)
 ├── pearl/            # Core types and validation
-└── storage/          # SQLite, JSONL, content files, vector index
+└── storage/          # SQLite, JSONL, content files
 ```
 
 ## License
