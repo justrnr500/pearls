@@ -13,7 +13,6 @@
 | `pearls context --for <path>` | Get pearls matching file globs |
 | `pearls context --scope <name>` | Get pearls by scope |
 | `pearls search "query"` | Keyword search |
-| `pearls search "query" --semantic` | Semantic search |
 | `pearls clutch` | Output all required pearls |
 | `pearls doctor` | Check catalog health |
 | `pearls onboard` | Set up agent instructions |

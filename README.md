@@ -80,8 +80,6 @@ Another issue I've faced is the context bloat.  This allows hooks to inject cont
 
 I tried forcing my agents to comment thoroughly, but I haven't had good luck with it.  I tried deep nested claude actions, but the append-style of them lead to all sorts of interesting weirdness.  So now I'm here.
 
-There was once a semantic search for this, but I never saw my own agents using it, so I took it out as it was heavyweight.
-
 I hope its useful!
 
 ## Commands

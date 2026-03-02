@@ -4,7 +4,7 @@
 
 ```
 .pearls/
-├── config.yaml     # Project settings (vector search, project name)
+├── config.yaml     # Project settings (project name)
 ├── pearls.db       # SQLite database (gitignored)
 ├── pearls.jsonl    # Git-tracked source of truth
 ├── content/        # Markdown files organized by namespace
@@ -36,7 +36,4 @@ type Paths struct {
 ```yaml
 project:
   name: my-project
-vector_search:
-  enabled: true
-  model_path: ""  # empty = default (~/.pearls/models)
 ```
