@@ -6,6 +6,3 @@ storage:
 defaults:
     status: active
     created_by: ${USER}
-vector_search:
-    enabled: true
-    model_path: ~/.pearls/models
