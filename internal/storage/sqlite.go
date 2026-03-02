@@ -7,17 +7,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
-	sqlite_vec "github.com/asg017/sqlite-vec-go-bindings/cgo"
 	"github.com/bmatcuk/doublestar/v4"
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/justrnr500/pearls/internal/pearl"
 )
-
-var vecInitOnce sync.Once
 
 const schema = `
 CREATE TABLE IF NOT EXISTS pearls (
@@ -47,13 +43,6 @@ CREATE INDEX IF NOT EXISTS idx_pearls_type ON pearls(type);
 CREATE INDEX IF NOT EXISTS idx_pearls_status ON pearls(status);
 `
 
-// vectorSchema creates the vector embeddings table (separate due to virtual table syntax)
-const vectorSchema = `
-CREATE VIRTUAL TABLE IF NOT EXISTS pearl_embeddings USING vec0(
-	embedding FLOAT[384]
-);
-`
-
 // DB wraps the SQLite database connection.
 type DB struct {
 	db   *sql.DB
@@ -62,11 +51,6 @@ type DB struct {
 
 // OpenDB opens or creates a SQLite database at the given path.
 func OpenDB(path string) (*DB, error) {
-	// Initialize sqlite-vec extension (once per process)
-	vecInitOnce.Do(func() {
-		sqlite_vec.Auto()
-	})
-
 	// Ensure directory exists
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {
@@ -82,12 +66,6 @@ func OpenDB(path string) (*DB, error) {
 	if _, err := db.Exec(schema); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("initialize schema: %w", err)
-	}
-
-	// Initialize vector schema
-	if _, err := db.Exec(vectorSchema); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("initialize vector schema: %w", err)
 	}
 
 	return &DB{db: db, path: path}, nil
